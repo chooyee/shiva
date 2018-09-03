@@ -1,0 +1,5 @@
+{
+    "http.port": 8484,
+    "db_name": "signavio",
+    "connection_string": "mongodb://mongoadmin:mongoadmin@192.168.41.129:27017"
+  }

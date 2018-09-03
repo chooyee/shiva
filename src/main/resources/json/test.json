@@ -1,0 +1,25 @@
+{
+    "triggerInstance": {
+      "sourceWorkflowId": "5b86703dfebe22158c43ef73",
+      "data": {
+        "formInstance": {
+          "value": {
+            "fields": [
+              {
+                "elementType": "fieldInstance",
+                "id": "pe7w5c74wv3apas43r",
+                "name": "Name",
+                "type": {
+                  "name": "text"
+                },
+                "visible": true,
+                "readOnly": false,
+                "required": false,
+                "value": "abc"
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
