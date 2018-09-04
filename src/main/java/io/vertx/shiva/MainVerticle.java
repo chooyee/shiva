@@ -5,8 +5,10 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.eventbus.impl.codecs.PingMessageCodec;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerResponse;
+import io.vertx.core.json.Json;
 // import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
@@ -207,19 +209,27 @@ public class MainVerticle extends AbstractVerticle {
     Whisky whisky = caseWhisky(newCaseName);
     getUserToken(id, token -> {
       if (token.succeeded()){
-        WebClient client = WebClient.create(vertx);
-        client       
-          .post(8080, "localhost", "/api/v1/alliancebankofmalaysia/cases")
-          .putHeader("Authorization", token.result())
-          .putHeader("Content-Type", "application/json")
-          .sendJson(whisky, ar -> {
+        postJson("localhost", "/api/v1/alliancebankofmalaysia/cases", 8080, token.result(), whisky, ar -> {
           if (ar.succeeded()) {
             routingContext.response()
             .setStatusCode(200)
             .putHeader("content-type", "application/json; charset=utf-8")
-            .end(ar.result().bodyAsString());
+            .end(ar.result());
           }     
-        });//end client
+        });
+        // WebClient client = WebClient.create(vertx);
+        // client       
+        //   .post(8080, "localhost", "/api/v1/alliancebankofmalaysia/cases")
+        //   .putHeader("Authorization", token.result())
+        //   .putHeader("Content-Type", "application/json")
+        //   .sendJson(whisky, ar -> {
+        //   if (ar.succeeded()) {
+        //     routingContext.response()
+        //     .setStatusCode(200)
+        //     .putHeader("content-type", "application/json; charset=utf-8")
+        //     .end(ar.result().bodyAsString());
+        //   }     
+        // });//end client
       }
       else{
         routingContext.response()
@@ -230,6 +240,23 @@ public class MainVerticle extends AbstractVerticle {
     });
   }
 
+  private void postJson(String host, String requestUri, int port, String authToken, Object pojo, Handler<AsyncResult<String>> aHandler)
+  {
+    WebClient client = WebClient.create(vertx);
+    client       
+      .post(port, host, requestUri)
+      .putHeader("Authorization", authToken)
+      .putHeader("Content-Type", "application/json")
+      .sendJson(pojo, ar -> {
+      if (ar.succeeded()) {
+        aHandler.handle(Future.succeededFuture(ar.result().bodyAsString())); 
+      }
+      else
+      {
+        aHandler.handle(Future.failedFuture("Error: An unexpected error had occur!" + Json.encodePrettily(pojo))); 
+      }
+    });//end client
+  }
   private Whisky caseWhisky(String newCaseName)
   {
     try(Reader reader = new InputStreamReader(MainVerticle.class.getClassLoader().getResourceAsStream("test.json"), "UTF-8")){
