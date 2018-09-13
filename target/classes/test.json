@@ -1,25 +1,25 @@
 {
-    "triggerInstance": {
-      "sourceWorkflowId": "5b86703dfebe22158c43ef73",
-      "data": {
-        "formInstance": {
-          "value": {
-            "fields": [
-              {
-                "elementType": "fieldInstance",
-                "id": "pe7w5c74wv3apas43r",
-                "name": "Name",
-                "type": {
-                  "name": "text"
-                },
-                "visible": true,
-                "readOnly": false,
-                "required": false,
-                "value": "abc"
-              }
-            ]
-          }
+  "triggerInstance": {
+    "sourceWorkflowId": "5b9879184581670e08f5f5d0",
+    "data": {
+      "formInstance": {
+        "value": {
+          "fields": [
+            {
+              "elementType": "fieldInstance",
+              "id": "peznoqzd4cjbi63v7s",
+              "name": "idfront",
+              "type": {
+                "name": "fileId"
+              },
+              "visible": true,
+              "readOnly": false,
+              "required": false,
+              "value": "5b9a34cb4581670dace6e438"
+            }
+          ]
         }
       }
     }
   }
+}

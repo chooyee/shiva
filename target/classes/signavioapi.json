@@ -1,0 +1,6 @@
+{
+    "sig_org":"alliancebankofmalaysia/",
+    "sig_apiver":"api/v1/",
+    "sig_uri":"http://127.0.0.1",
+    "sig_port":"8080"
+  }

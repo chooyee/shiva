@@ -1,14 +1,14 @@
 package io.vertx.shiva;
 import io.vertx.shiva.liquor.*;
+import io.vertx.shiva.signavio.*;
+import io.vertx.shiva.util.*;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.eventbus.impl.codecs.PingMessageCodec;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerResponse;
-import io.vertx.core.json.Json;
 // import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
@@ -16,13 +16,12 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.StaticHandler;
-import io.vertx.ext.web.client.WebClient;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.handler.CorsHandler;
 
 import java.util.HashSet;
 import java.util.Set;
-
+import java.util.Base64;
 import java.util.List;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -31,6 +30,8 @@ import java.io.Reader;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+
+
 
 public class MainVerticle extends AbstractVerticle {
 
@@ -96,12 +97,13 @@ public class MainVerticle extends AbstractVerticle {
 
     router.route("/assets/*").handler(StaticHandler.create("assets"));
 
-    router.get("/api/v1/users/token/:id").handler(this::getOne);
-    router.get("/api/v1/test/:id/:newCaseName").handler(this::postTrigger);
-    router.post("/api/v1/test").handler(this::postTrigger);
-    // router.post("/api/v1/j").handler(this::postJson);
-    router.route("/api/v1/j").handler(BodyHandler.create());
-    router.post("/api/v1/j").handler(this::postJson);
+    router.get("/api/v1/users/token/:id").handler(this::getUserTokenByID);   
+    router.route("/api/v1/case/new").handler(BodyHandler.create());
+    router.post("/api/v1/case/new").handler(this::initCase);
+
+    router.get("/api/v1/test/:id/:newCaseName").handler(this::test_post_trigger);
+    router.post("/api/v1/test/posttrigger").handler(this::test_post_trigger);
+    router.get("/api/v1/test/upload").handler(this::test_signavio_upload);
     // router.post("/api/whiskies").handler(this::addOne);
     // router.get("/api/whiskies/:id").handler(this::getOne);
     // router.put("/api/whiskies/:id").handler(this::updateOne);
@@ -134,58 +136,20 @@ public class MainVerticle extends AbstractVerticle {
     mongo.close();
   }
 
-  private void getOne(RoutingContext routingContext) {
-    final String id = routingContext.request().getParam("id");
-    
-    if (id == null) {
-      routingContext.response().setStatusCode(400).end();
-    } else {
-      mongo.findOne("users", new JsonObject().put("emailAddressLower", id), null, ar -> {
-        if (ar.succeeded()) {
-          if (ar.result() == null) {
-            routingContext.response().setStatusCode(404).end();
-            return;
-          }
-         
-          routingContext.response()
-              .setStatusCode(200)
-              .putHeader("content-type", "application/json; charset=utf-8")
-              .end(ar.result().getString("token"));
-        } else {
-          routingContext.response().setStatusCode(404).end();
-        }
-      });
-    }
+  //#region Test Method
+  private void test_signavio_upload(RoutingContext routingContext)
+  {
+    UserHelper.getUserTokenByID(mongo, config().getString("test_user") , token -> {
+      String result = WebClientHelper.uploadToSignavioTest(token.result());
+      routingContext.response()
+      .setStatusCode(200)
+      .putHeader("content-type", "application/json; charset=utf-8")
+      .end(result);
+    });
+   
   }
 
-  private void getUserToken(String id, Handler<AsyncResult<String>> aHandler) {
-    
-      mongo.findOne("users", new JsonObject().put("emailAddressLower", id), null, ar -> {
-        if (ar.succeeded()) {
-          if (ar.result() == null) {
-            aHandler.handle(Future.failedFuture("Connection succeeded but no result found!")); 
-          }
-          else {
-            aHandler.handle(Future.succeededFuture(ar.result().getString("token"))); 
-          }
-        }
-        
-      });
-    
-  }
-  // private void getTest(RoutingContext routingContext) {
-    
-    
-  //   Whisky w = new Whisky();
-  
-  //   routingContext.response()
-  //       .setStatusCode(200)
-  //       .putHeader("content-type", "application/json; charset=utf-8")
-  //       .end(Json.encodePrettily(w));
-        
-  // }
-
-  private void postTrigger(RoutingContext routingContext) 
+  private void test_post_trigger(RoutingContext routingContext) 
   {
     final String id = routingContext.request().getParam("id");
     final String newCaseName = routingContext.request().getParam("newCaseName");
@@ -193,7 +157,6 @@ public class MainVerticle extends AbstractVerticle {
     newCase(routingContext, id, newCaseName);
   
   }//end post trigger
-
   private void postJson(RoutingContext routingContext) 
   {
     JsonObject jsonStr = routingContext.getBodyAsJson();
@@ -207,9 +170,9 @@ public class MainVerticle extends AbstractVerticle {
   private void newCase(RoutingContext routingContext, String id, String newCaseName)
   {
     Whisky whisky = caseWhisky(newCaseName);
-    getUserToken(id, token -> {
+    UserHelper.getUserTokenByID(mongo, id, token -> {
       if (token.succeeded()){
-        postJson("localhost", "/api/v1/alliancebankofmalaysia/cases", 8080, token.result(), whisky, ar -> {
+        new WebClientPost().postJson("localhost", "/api/v1/alliancebankofmalaysia/cases", 8080, token.result(), whisky, ar -> {
           if (ar.succeeded()) {
             routingContext.response()
             .setStatusCode(200)
@@ -217,19 +180,7 @@ public class MainVerticle extends AbstractVerticle {
             .end(ar.result());
           }     
         });
-        // WebClient client = WebClient.create(vertx);
-        // client       
-        //   .post(8080, "localhost", "/api/v1/alliancebankofmalaysia/cases")
-        //   .putHeader("Authorization", token.result())
-        //   .putHeader("Content-Type", "application/json")
-        //   .sendJson(whisky, ar -> {
-        //   if (ar.succeeded()) {
-        //     routingContext.response()
-        //     .setStatusCode(200)
-        //     .putHeader("content-type", "application/json; charset=utf-8")
-        //     .end(ar.result().bodyAsString());
-        //   }     
-        // });//end client
+      
       }
       else{
         routingContext.response()
@@ -240,23 +191,7 @@ public class MainVerticle extends AbstractVerticle {
     });
   }
 
-  private void postJson(String host, String requestUri, int port, String authToken, Object pojo, Handler<AsyncResult<String>> aHandler)
-  {
-    WebClient client = WebClient.create(vertx);
-    client       
-      .post(port, host, requestUri)
-      .putHeader("Authorization", authToken)
-      .putHeader("Content-Type", "application/json")
-      .sendJson(pojo, ar -> {
-      if (ar.succeeded()) {
-        aHandler.handle(Future.succeededFuture(ar.result().bodyAsString())); 
-      }
-      else
-      {
-        aHandler.handle(Future.failedFuture("Error: An unexpected error had occur!" + Json.encodePrettily(pojo))); 
-      }
-    });//end client
-  }
+ 
   private Whisky caseWhisky(String newCaseName)
   {
     try(Reader reader = new InputStreamReader(MainVerticle.class.getClassLoader().getResourceAsStream("test.json"), "UTF-8")){
@@ -282,5 +217,70 @@ public class MainVerticle extends AbstractVerticle {
      return null;
     }//end catch
   }
+  //#endregion
 
+  private void getUserTokenByID(RoutingContext routingContext) {
+    final String id = routingContext.request().getParam("id");
+    
+    if (id == null) {
+      routingContext.response().setStatusCode(400).end();
+    } else {
+      UserHelper.getUserTokenByID(mongo, id, ar->{
+        if (ar.succeeded()) {
+          if (ar.result() == null) {
+            routingContext.response().setStatusCode(404).end();
+            return;
+          }
+         
+          routingContext.response()
+              .setStatusCode(200)
+              .putHeader("content-type", "application/json; charset=utf-8")
+              .end(ar.result());
+        } else {
+          routingContext.response().setStatusCode(404).end();
+        }
+      });
+      
+    }
+  }
+
+  /**
+  * This is call by DBOS to initiate a new EDD workflow
+  */
+  private void initCase(RoutingContext routingContext)
+  {
+  
+    JsonObject jsonObj = routingContext.getBodyAsJson();
+    final String id = jsonObj.getString("id");
+    final String newCaseName = jsonObj.getString("newCaseName");
+
+    UserHelper.getUserTokenByID(mongo, id, ar->{
+      if (ar.succeeded()) {
+        if (ar.result() == null) {
+          routingContext.response().setStatusCode(404).end();
+          return;
+        }
+        InitCase.init(mongo, jsonObj, ar.result(), aHandler->{
+          if (aHandler.succeeded()){
+            InitCase.initWfTracker(mongo, aHandler.result(), id, wfHandler->{
+              routingContext.response()
+              .setStatusCode(200)
+              .putHeader("content-type", "application/json; charset=utf-8")
+              .end(aHandler.result());
+            });
+          }
+         
+        });
+       
+      } else {
+        routingContext.response().setStatusCode(404).end();
+      }
+    });
+  }
+
+  public static byte[] decodeBase64(String encodedString)
+  {
+      byte[] imageByte = Base64.getDecoder().decode(encodedString);
+      return imageByte;
+  }
 }
