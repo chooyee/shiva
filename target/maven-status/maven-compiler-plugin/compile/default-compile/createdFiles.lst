@@ -10,6 +10,7 @@ io\vertx\shiva\signavio\SignavioApiPathHelper.class
 io\vertx\util\Runner$JSHelloWorldRunner.class
 io\vertx\util\Runner$JSTemplatingRunner.class
 io\vertx\shiva\liquor\FormInstance.class
+io\vertx\shiva\signavio\Case.class
 io\vertx\util\Runner$GroovyChatRunner.class
 io\vertx\util\Runner$GroovyTemplatingRunner.class
 io\vertx\util\Runner$JSRealtimeRunner.class

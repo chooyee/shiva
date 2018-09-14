@@ -19,9 +19,15 @@ import java.io.Reader;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
-public class InitCase 
+public class InitCase extends Case
 {
-    public static void init(MongoClient mongo, JsonObject jsonObj, String token, Handler<AsyncResult<String>> aHandler) 
+    /**
+     * Inititalize new workflow
+     * @param jsonObj
+     * @param token
+     * @param aHandler
+     */
+    public static void init(JsonObject jsonObj, String token, Handler<AsyncResult<String>> aHandler) 
     {
         //JsonObject jsonStr = routingContext.getBodyAsJson();
         final String id = jsonObj.getString("id");
@@ -63,17 +69,25 @@ public class InitCase
 
                 JsonObject document = new JsonObject()
                 .put("caseid", caseObj.getString("id"))
-                .put("sourceWorkflowId", caseObj.getString("sourceWorkflowId"))
                 .put("email", userid)
-                .put("branch", ar.result().getString("branch"));
-               
-                MongoDBHelper.insert(mongo, "abmb_tracker", document, aHandler);
+                .put("branch", ar.result().getString("branch"))
+                .put("complete", "false");
+                
+                mongo.insert("abmb_tracker", document, insertar -> {
+                    if (ar.succeeded()) {
+                        aHandler.handle(Future.succeededFuture(insertar.result())); 
+                    } else {
+                        aHandler.handle(Future.failedFuture(document.encodePrettily())); 
+                    }
+                });
+                //MongoDBHelper.insert(mongo, "abmb_tracker", document, aHandler);
             }
             
           });
         
     }//end InitCase
 
+    
     private static Whisky caseWhisky(String newCaseName, String idfront)
     {
         try(Reader reader = new InputStreamReader(io.vertx.shiva.MainVerticle.class.getClassLoader().getResourceAsStream("test.json"), "UTF-8")){

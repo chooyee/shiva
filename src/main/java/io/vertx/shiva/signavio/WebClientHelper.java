@@ -70,4 +70,12 @@ public class WebClientHelper{
         return client.post(Json.encodePrettily(pojo), String.class);
        
     }
+    public static String putJson(String url, String authToken, Object pojo)
+    {
+        WebClient client =  WebClient.create(url);
+        client.header("Authorization", authToken);
+        client.type("application/json");
+        return client.put(Json.encodePrettily(pojo), String.class);
+       
+    }
 }

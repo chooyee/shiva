@@ -9,7 +9,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerResponse;
-// import io.vertx.core.json.Json;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.Router;
@@ -21,7 +21,6 @@ import io.vertx.ext.web.handler.CorsHandler;
 
 import java.util.HashSet;
 import java.util.Set;
-import java.util.Base64;
 import java.util.List;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -30,6 +29,7 @@ import java.io.Reader;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+
 
 
 
@@ -100,14 +100,15 @@ public class MainVerticle extends AbstractVerticle {
     router.get("/api/v1/users/token/:id").handler(this::getUserTokenByID);   
     router.route("/api/v1/case/new").handler(BodyHandler.create());
     router.post("/api/v1/case/new").handler(this::initCase);
+    router.get("/api/v1/task/unassigned/:caseid").handler(this::getUnAssignedTask); 
+    router.get("/api/v1/task/assign/:caseid").handler(this::setAssignee);  
 
     router.get("/api/v1/test/:id/:newCaseName").handler(this::test_post_trigger);
     router.post("/api/v1/test/posttrigger").handler(this::test_post_trigger);
     router.get("/api/v1/test/upload").handler(this::test_signavio_upload);
-    // router.post("/api/whiskies").handler(this::addOne);
-    // router.get("/api/whiskies/:id").handler(this::getOne);
-    // router.put("/api/whiskies/:id").handler(this::updateOne);
-    // router.delete("/api/whiskies/:id").handler(this::deleteOne);
+    router.get("/api/v1/test/mongo").handler(this::test_mongo_find);
+    router.get("/api/v1/test/taskassign/:caseid").handler(this::test_task_assign);
+
 
 
     // Create the HTTP server and pass the "accept" method to the request handler.
@@ -137,6 +138,20 @@ public class MainVerticle extends AbstractVerticle {
   }
 
   //#region Test Method
+  private void test_mongo_find(RoutingContext routingContext)
+  { 
+    JsonObject query = new JsonObject()
+    .put("_id", new JsonObject().put("$oid","5b9a3ff14581670dace6e4f1"))
+    .put("variables", new JsonObject().put("$elemMatch", new JsonObject().put("id", "pez0zh4qxcbwo1wd6u")));
+    mongo.find("workflows", query, ar -> {
+      if (ar.succeeded())
+        routingContext.response()
+        .setStatusCode(200)
+        .putHeader("content-type", "application/json; charset=utf-8")
+        .end(Json.encodePrettily(ar.result()));
+    });
+  }
+
   private void test_signavio_upload(RoutingContext routingContext)
   {
     UserHelper.getUserTokenByID(mongo, config().getString("test_user") , token -> {
@@ -217,6 +232,18 @@ public class MainVerticle extends AbstractVerticle {
      return null;
     }//end catch
   }
+
+  private void test_task_assign(RoutingContext routingContext)
+  {
+    final String caseId = routingContext.request().getParam("caseid");
+    Case.setTaskAssignee(mongo, caseId, car->{
+      routingContext.response()
+      .setStatusCode(200)
+      .putHeader("content-type", "application/json; charset=utf-8")
+      .end(Json.encodePrettily(car.result()));
+    });
+  
+  }
   //#endregion
 
   private void getUserTokenByID(RoutingContext routingContext) {
@@ -260,7 +287,7 @@ public class MainVerticle extends AbstractVerticle {
           routingContext.response().setStatusCode(404).end();
           return;
         }
-        InitCase.init(mongo, jsonObj, ar.result(), aHandler->{
+        InitCase.init(jsonObj, ar.result(), aHandler->{
           if (aHandler.succeeded()){
             InitCase.initWfTracker(mongo, aHandler.result(), id, wfHandler->{
               routingContext.response()
@@ -278,9 +305,35 @@ public class MainVerticle extends AbstractVerticle {
     });
   }
 
-  public static byte[] decodeBase64(String encodedString)
+  /**
+   * Set task assignee
+   * @param routingContext
+   */
+  private void setAssignee(RoutingContext routingContext)
   {
-      byte[] imageByte = Base64.getDecoder().decode(encodedString);
-      return imageByte;
+    final String caseId = routingContext.request().getParam("caseid");
+    Case.setTaskAssignee(mongo, caseId, car->{
+      routingContext.response()
+      .setStatusCode(200)
+      .putHeader("content-type", "application/json; charset=utf-8")
+      .end(Json.encodePrettily(car.result()));
+    });
+    
   }
+  private void getUnAssignedTask(RoutingContext routingContext)
+  {
+    final String caseId = routingContext.request().getParam("caseid");
+    Case.getUnAssignedTask(mongo, caseId, aHandler->{
+        routingContext.response()
+        .setStatusCode(200)
+        .putHeader("content-type", "text/html; charset=utf-8")
+        .end(Json.encodePrettily(aHandler.result()));
+    });
+ 
+  }
+  // public static byte[] decodeBase64(String encodedString)
+  // {
+  //     byte[] imageByte = Base64.getDecoder().decode(encodedString);
+  //     return imageByte;
+  // }
 }

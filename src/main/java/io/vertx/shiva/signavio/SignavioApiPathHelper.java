@@ -14,6 +14,7 @@ public class SignavioApiPathHelper {
    
     private String files = "files";
     private String cases = "cases";
+    private String tasks = "tasks";
     private JsonObject jsonObject;
 
     public SignavioApiPathHelper() {
@@ -38,7 +39,10 @@ public class SignavioApiPathHelper {
     {
         return apiPath + cases;
     }
-
+    public String getTasks()
+    {
+        return apiPath + tasks;
+    }
     public String getUri()
     {
         return this.jsonObject.get("sig_uri").getAsString();
