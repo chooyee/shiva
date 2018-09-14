@@ -9,6 +9,7 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.ext.mongo.MongoClient;
 
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Date;
 import java.text.SimpleDateFormat;
 
@@ -149,21 +150,47 @@ public class Case
 
     public static void getUnAssignedTask(MongoClient mongo,String caseId, Handler<AsyncResult<List<JsonObject>>> aHandler) 
     {
-        JsonObject query = new JsonObject()
-        .put("caseId", new JsonObject().put("$oid", caseId))
-        .put("assigneeGroupId", new JsonObject().put("$exists",false))
-        .put("assigneeId", new JsonObject().put("$exists",false))
-        .put("completed", new JsonObject().put("$exists",false));
-        mongo.find("tasks", query, ar -> {
-            if (ar.succeeded()) {
-                aHandler.handle(Future.succeededFuture(ar.result())); 
+        getCase(mongo, caseId, car->{
+            if (car.succeeded()) {
+                if (car.result().containsKey("closed"))
+                {
+                    updateTracker(mongo, caseId, res->{});
+                    aHandler.handle(Future.succeededFuture(new ArrayList<JsonObject>())); 
+                }
+                else{
+                    JsonObject query = new JsonObject()
+                    .put("caseId", new JsonObject().put("$oid", caseId))
+                    .put("assigneeGroupId", new JsonObject().put("$exists",false))
+                    .put("assigneeId", new JsonObject().put("$exists",false))
+                    .put("completed", new JsonObject().put("$exists",false));
+                    mongo.find("tasks", query, ar -> {
+                        if (ar.succeeded()) {
+                            aHandler.handle(Future.succeededFuture(ar.result())); 
+                        }
+                        else{
+                            aHandler.handle(Future.failedFuture(Json.encodePrettily(ar.result()))); 
+                        }
+                      });
+                }
             }
             else{
-                aHandler.handle(Future.failedFuture(Json.encodePrettily(ar.result()))); 
+                aHandler.handle(Future.failedFuture(Json.encodePrettily(car.result()))); 
             }
-          });
+        });
+       
         
-    }//end getCase
+    }//end getUnAssignedTask
 
-    
+    private static void updateTracker(MongoClient mongo, String caseId, Handler<AsyncResult<String>> aHandler ){
+        JsonObject query = new JsonObject()
+        .put("caseid", caseId);
+      
+        JsonObject update = new JsonObject().put("$set", new JsonObject()
+        .put("complete", true));
+
+        mongo.updateCollection("abmb_tracker", query, update, res -> {
+            //System.err.println(Json.encodePrettily(res.result()));
+            aHandler.handle(Future.succeededFuture("Update sucessfull!")); 
+        });
+    }
 }

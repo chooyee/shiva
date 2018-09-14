@@ -30,9 +30,6 @@ import java.io.Reader;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
-
-
-
 public class MainVerticle extends AbstractVerticle {
 
   public static final String COLLECTION = "signavio";

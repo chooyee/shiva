@@ -64,14 +64,14 @@ public class InitCase extends Case
     {
         JsonObject caseObj = new JsonObject(resultStr);
         
-        mongo.findOne("abmb_user_branch", new JsonObject().put("userid", userid), null, ar -> {
+        mongo.findOne("abmb_user_branch", new JsonObject().put("email", userid), null, ar -> {
             if (ar.succeeded()) {
 
                 JsonObject document = new JsonObject()
                 .put("caseid", caseObj.getString("id"))
                 .put("email", userid)
                 .put("branch", ar.result().getString("branch"))
-                .put("complete", "false");
+                .put("complete", false);
                 
                 mongo.insert("abmb_tracker", document, insertar -> {
                     if (ar.succeeded()) {
