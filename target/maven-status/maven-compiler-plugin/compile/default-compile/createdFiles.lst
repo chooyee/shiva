@@ -1,11 +1,11 @@
 io\vertx\shiva\SatiVerticle.class
 io\vertx\shiva\liquor\Field.class
+io\vertx\shiva\signavio\FinalCase.class
 io\vertx\shiva\liquor\Data.class
 io\vertx\shiva\liquor\TriggerInstance.class
 io\vertx\util\Runner.class
 io\vertx\shiva\liquor\Type.class
 io\vertx\shiva\ShivaVerticle.class
-io\vertx\shiva\signavio\rxTest.class
 io\vertx\shiva\signavio\UserHelper.class
 io\vertx\shiva\liquor\Value.class
 io\vertx\shiva\signavio\SignavioApiPathHelper.class

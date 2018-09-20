@@ -16,13 +16,28 @@ import java.text.SimpleDateFormat;
 
 public class Case 
 {
+    protected MongoClient mongo;
+
+    public MongoClient getMongo() {
+        return mongo;
+    }
+
+    public void setMongo(MongoClient mongo) {
+        this.mongo = mongo;
+    }
+
+    public Case(MongoClient mongo)
+    {
+        this.mongo = mongo;
+    }
+
     /**
      * Inititalize new workflow
      * @param jsonObj
      * @param token
      * @param aHandler
      */
-    public static void getCase(MongoClient mongo, String caseID,Handler<AsyncResult<JsonObject>> aHandler) 
+    public void getCase(String caseID,Handler<AsyncResult<JsonObject>> aHandler) 
     {
         mongo.findOne("cases", new JsonObject().put("_id", new JsonObject().put("$oid",caseID)), null, ar -> {
             if (ar.succeeded()) {               
@@ -35,9 +50,9 @@ public class Case
         
     }//end getCase
 
-    public static void setTaskAssignee(MongoClient mongo,String caseId, Handler<AsyncResult<JsonObject>> aHandler) 
+    public void setTaskAssignee(String caseId, Handler<AsyncResult<JsonObject>> aHandler) 
     {   
-        getUnAssignedTask(mongo, caseId, tar->{
+        getUnAssignedTask(caseId, tar->{
             if (tar.succeeded()){
                 List<JsonObject> unassignedTask = tar.result();
             
@@ -51,7 +66,7 @@ public class Case
                         /**
                          * Get task role name and creator branch to derrive Group Name
                          */
-                        getUserInfo(mongo, workflowId, roleVariableId, rar->{
+                        getUserInfo(workflowId, roleVariableId, rar->{
                             String roleName = rar.result().getString("roleName");
                             String groupName = rar.result().getString("branch") + "_" + roleName;
                             String token = rar.result().getString("token");
@@ -110,9 +125,9 @@ public class Case
         
     }//end InitCase
  
-    public static void getUserInfo(MongoClient mongo, String workflowID, String roleID, Handler<AsyncResult<JsonObject>> aHandler)
+    public void getUserInfo(String workflowID, String roleID, Handler<AsyncResult<JsonObject>> aHandler)
     {
-        getWorkflow(mongo, workflowID, ar->{
+        getWorkflow(workflowID, ar->{
             if (ar.succeeded())
             {
                 String roleName = "";
@@ -140,7 +155,7 @@ public class Case
 
     }
 
-    public static void getWorkflow(MongoClient mongo, String workflowID, Handler<AsyncResult<JsonObject>> aHandler) 
+    public void getWorkflow(String workflowID, Handler<AsyncResult<JsonObject>> aHandler) 
     {
         JsonObject query = new JsonObject().put("_id", new JsonObject().put("$oid",workflowID));
         mongo.findOne("workflows", query, null, ar -> {
@@ -154,13 +169,13 @@ public class Case
         
     }//end getCase
 
-    public static void getUnAssignedTask(MongoClient mongo,String caseId, Handler<AsyncResult<List<JsonObject>>> aHandler) 
+    public void getUnAssignedTask(String caseId, Handler<AsyncResult<List<JsonObject>>> aHandler) 
     {
-        getCase(mongo, caseId, car->{
+        getCase(caseId, car->{
             if (car.succeeded()) {
                 if (car.result().containsKey("closed"))
                 {
-                    updateTracker(mongo, caseId, res->{});
+                    updateTracker(caseId, res->{});
                     aHandler.handle(Future.succeededFuture(new ArrayList<JsonObject>())); 
                 }
                 else{
@@ -187,7 +202,7 @@ public class Case
         
     }//end getUnAssignedTask
 
-    private static void updateTracker(MongoClient mongo, String caseId, Handler<AsyncResult<String>> aHandler ){
+    private void updateTracker(String caseId, Handler<AsyncResult<String>> aHandler ){
         JsonObject query = new JsonObject()
         .put("caseid", caseId);
       
@@ -199,63 +214,5 @@ public class Case
             aHandler.handle(Future.succeededFuture("Update sucessfull!")); 
         });
     }
-
-   
-
-
-    // public static Future<String> updateDBOS(MongoClient mongo, String caseId){
-    //     System.err.println("case id " + caseId);
-    //     Future<String> future = Future.future();
-    //     JsonArray actions = new JsonArray();
-    //     getCase(mongo, caseId, aHandler ->{
-    //         if (aHandler.succeeded())
-    //         {
-    //             JsonObject caseObj = aHandler.result();
-              
-    //             caseObj.getJsonArray("participants").forEach(p ->{
-    //                 //System.err.println(Json.encodePrettily(p));
-    //                 JsonObject participant = (JsonObject)p;
-    //                 participant.getJsonArray("events").forEach(e->{
-                        
-    //                     JsonObject event = (JsonObject)e;
-    //                     System.err.println(Json.encodePrettily(event));
-    //                     String userId = new JsonObject(event.getValue("userId").toString()).getString("$oid");
-    //                     System.err.println(userId);
-    //                     UserHelper.getUserInfoByObjID(mongo, userId, ar->{
-    //                         if (ar.succeeded())
-    //                         {
-    //                             event.put("userName", ar.result().getString("emailAddressLower"));
-    //                             System.err.println(Json.encodePrettily(event));
-    //                             actions.add(event);
-    //                         }
-    //                         else
-    //                         {
-    //                             System.err.println("failed to get user id : " + userId);
-    //                         }
-    //                     });
-    //                 });
-    //             });
-    //             System.err.println(Json.encodePrettily(actions));
-    //             future.complete(Json.encodePrettily(actions));
-    //         }
-    //         else
-    //         {
-    //             future.fail(Json.encodePrettily(aHandler.result()));
-    //         }
-           
-    //     });
-        
-    //     return future;
-        
-       
-    //     // caseObj.getJsonObject("participants").iterator().forEachRemaining(k ->
-    //     // {
-    //     //     JsonObject eventsObj = caseObj.getJsonObject(k.getKey());
-    //     //     eventsObj.getJsonObject("events").iterator().forEachRemaining(j ->
-    //     //     {
-
-    //     //     });
-    //     // });
-    // }
 
 }

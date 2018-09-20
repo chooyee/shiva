@@ -105,7 +105,7 @@ public class ShivaVerticle extends AbstractVerticle {
     // router.post("/api/v1/test/posttrigger").handler(this::test_post_trigger);
     // router.get("/api/v1/test/upload").handler(this::test_signavio_upload);
     // router.get("/api/v1/test/mongo").handler(this::test_mongo_find);
-    router.get("/api/v1/test/json/:caseid").handler(this::test_json);
+    router.get("/api/v1/test/case/final/:caseid").handler(this::test_final_case);
     router.get("/api/v1/test/case/get/:caseid").handler(this::test_get_case);
 
 
@@ -137,22 +137,23 @@ public class ShivaVerticle extends AbstractVerticle {
     mongo.close();
   }
 
+  //=============================================================================================
   //#region Test Method
-  private void test_json(RoutingContext routingContext)
+  private void test_final_case(RoutingContext routingContext)
   {
     final String id = routingContext.request().getParam("caseid");
-    rxTest.updateDBOS(mongo, id);
-    routingContext.response()
-    .setStatusCode(200)
-    .putHeader("content-type", "text/html; charset=utf-8")
-    .end("eewrew");
-    // Case.updateDBOS(mongo, id)
-    // .setHandler(ar->{
-    //   routingContext.response()
-    //   .setStatusCode(200)
-    //   .putHeader("content-type", "application/json; charset=utf-8")
-    //   .end(ar.result());
-    // });
+    new FinalCase(mongo).finale(id, finalHandler ->{
+      if (finalHandler.succeeded())
+        routingContext.response()
+        .setStatusCode(200)
+        .putHeader("content-type", "application/json; charset=utf-8")
+        .end(Json.encodePrettily(finalHandler.result()));
+      else
+        routingContext.response()
+        .setStatusCode(418)
+        .putHeader("content-type", "application/json; charset=utf-8")
+        .end(Json.encodePrettily(finalHandler.cause()));
+    });
 
   }
 
@@ -160,11 +161,17 @@ public class ShivaVerticle extends AbstractVerticle {
   {
     
     final String id = routingContext.request().getParam("caseid");
-    Case.getCase(mongo, id, ar->{
-      routingContext.response()
-      .setStatusCode(200)
-      .putHeader("content-type", "application/json; charset=utf-8")
-      .end(Json.encodePrettily(ar.result()));
+    new Case(mongo).getCase(id, ar->{
+      if (ar.succeeded())
+        routingContext.response()
+        .setStatusCode(200)
+        .putHeader("content-type", "application/json; charset=utf-8")
+        .end(Json.encodePrettily(ar.result()));
+      else
+        routingContext.response()
+        .setStatusCode(418)
+        .putHeader("content-type", "application/json; charset=utf-8")
+        .end(Json.encodePrettily(ar.cause()));
     });
 
   }
@@ -181,6 +188,11 @@ public class ShivaVerticle extends AbstractVerticle {
         .setStatusCode(200)
         .putHeader("content-type", "application/json; charset=utf-8")
         .end(Json.encodePrettily(ar.result()));
+      else
+        routingContext.response()
+        .setStatusCode(418)
+        .putHeader("content-type", "application/json; charset=utf-8")
+        .end(Json.encodePrettily(ar.cause()));
     });
   }
 
@@ -266,6 +278,7 @@ public class ShivaVerticle extends AbstractVerticle {
   }
 
   //#endregion
+  //=============================================================================================
 
   private void getUserTokenByID(RoutingContext routingContext) {
     final String id = routingContext.request().getParam("id");
@@ -285,7 +298,10 @@ public class ShivaVerticle extends AbstractVerticle {
               .putHeader("content-type", "application/json; charset=utf-8")
               .end(ar.result());
         } else {
-          routingContext.response().setStatusCode(404).end();
+            routingContext.response()
+              .setStatusCode(200)
+              .putHeader("content-type", "application/json; charset=utf-8")
+              .end(Json.encodePrettily(ar.cause()));
         }
       });
       
@@ -308,9 +324,10 @@ public class ShivaVerticle extends AbstractVerticle {
           routingContext.response().setStatusCode(404).end();
           return;
         }
-        InitCase.init(jsonObj, ar.result(), aHandler->{
+        InitCase initObject = new InitCase(mongo);
+        initObject.init(jsonObj, ar.result(), aHandler->{
           if (aHandler.succeeded()){
-            InitCase.initWfTracker(mongo, aHandler.result(), id, wfHandler->{
+            initObject.initWfTracker(aHandler.result(), id, wfHandler->{
               routingContext.response()
               .setStatusCode(200)
               .putHeader("content-type", "application/json; charset=utf-8")
@@ -333,7 +350,7 @@ public class ShivaVerticle extends AbstractVerticle {
   private void setAssignee(RoutingContext routingContext)
   {
     final String caseId = routingContext.request().getParam("caseid");
-    Case.setTaskAssignee(mongo, caseId, car->{
+    new Case(mongo).setTaskAssignee(caseId, car->{
       routingContext.response()
       .setStatusCode(200)
       .putHeader("content-type", "application/json; charset=utf-8")
@@ -344,7 +361,7 @@ public class ShivaVerticle extends AbstractVerticle {
   private void getUnAssignedTask(RoutingContext routingContext)
   {
     final String caseId = routingContext.request().getParam("caseid");
-    Case.getUnAssignedTask(mongo, caseId, aHandler->{
+    new Case(mongo).getUnAssignedTask(caseId, aHandler->{
         routingContext.response()
         .setStatusCode(200)
         .putHeader("content-type", "text/html; charset=utf-8")

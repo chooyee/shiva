@@ -21,15 +21,24 @@ import com.google.gson.GsonBuilder;
 
 public class InitCase extends Case
 {
+    public InitCase(MongoClient mongo)
+    {
+        super(mongo);
+    }
+
     /**
      * Inititalize new workflow
      * @param jsonObj
      * @param token
      * @param aHandler
      */
-    public static void init(JsonObject jsonObj, String token, Handler<AsyncResult<String>> aHandler) 
+    public void init(JsonObject jsonObj, String token, Handler<AsyncResult<String>> aHandler) 
     {
         //JsonObject jsonStr = routingContext.getBodyAsJson();
+        auditLog(jsonObj, ah->{
+            
+        });
+        
         final String id = jsonObj.getString("id");
         final String newCaseName = jsonObj.getString("newCaseName");
         String fileID = "";
@@ -53,6 +62,16 @@ public class InitCase extends Case
        
     }//end InitCase
 
+    private void auditLog(JsonObject incomingObject, Handler<AsyncResult<String>> aHandler)
+    {
+        mongo.insert("abmb_tracker", incomingObject, insertar -> {
+            if (insertar.succeeded()) {
+                aHandler.handle(Future.succeededFuture(insertar.result())); 
+            } else {
+                aHandler.handle(Future.failedFuture(insertar.cause())); 
+            }
+        });
+    }
     /**
      * To insert record to DB for tracking on Task. Purpose is to dynamically set the user group in the task
      * @param mongo
@@ -60,7 +79,7 @@ public class InitCase extends Case
      * @param userid
      * @param aHandler
      */
-    public static void initWfTracker(MongoClient mongo, String resultStr, String userid, Handler<AsyncResult<String>> aHandler) 
+    public void initWfTracker(String resultStr, String userid, Handler<AsyncResult<String>> aHandler) 
     {
         JsonObject caseObj = new JsonObject(resultStr);
         
