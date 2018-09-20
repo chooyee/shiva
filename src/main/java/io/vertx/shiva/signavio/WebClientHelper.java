@@ -6,8 +6,6 @@ import java.util.LinkedList;
 import java.io.ByteArrayInputStream;
 import javax.ws.rs.core.Response;
 
-import com.mongodb.async.client.MongoClient;
-
 import io.vertx.core.json.Json;
 
 import org.apache.cxf.jaxrs.client.WebClient;
