@@ -21,8 +21,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-import rx.Observable;
-
 @ExtendWith(VertxExtension.class)
 public class TestMainVerticle {
 
