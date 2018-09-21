@@ -64,7 +64,7 @@ public class InitCase extends Case
 
     private void auditLog(JsonObject incomingObject, Handler<AsyncResult<String>> aHandler)
     {
-        mongo.insert("abmb_tracker", incomingObject, insertar -> {
+        mongo.insert("abmb_init_log", incomingObject, insertar -> {
             if (insertar.succeeded()) {
                 aHandler.handle(Future.succeededFuture(insertar.result())); 
             } else {
