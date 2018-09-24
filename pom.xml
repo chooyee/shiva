@@ -81,9 +81,10 @@
     </dependency>
     <dependency>
       <groupId>io.vertx</groupId>
-      <artifactId>vertx-rx-java</artifactId>
-      <version>3.5.3</version>
+      <artifactId>vertx-sync</artifactId>
+      <version>${vertx.version}</version>
     </dependency>
+
   </dependencies>
   
   <build>
@@ -132,6 +133,23 @@
           </execution>
         </executions>
       </plugin>
+       <plugin>
+          <groupId>com.vlkan</groupId>
+          <artifactId>quasar-maven-plugin</artifactId>
+          <version>0.7.9</version>
+          <configuration>
+              <check>true</check>
+              <debug>true</debug>
+              <verbose>true</verbose>
+          </configuration>
+          <executions>
+              <execution>
+                  <goals>
+                      <goal>instrument</goal>
+                  </goals>
+              </execution>
+          </executions>
+      </plugin>
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
         <version>${maven-surefire-plugin.version}</version>
@@ -157,6 +175,7 @@
           <arguments>
             <argument>run</argument>
             <argument>${main.verticle}</argument>
+            <argument>-javaagent:${co.paralleluniverse:quasar-core:jar}</argument>
           </arguments>
         </configuration>
       </plugin>

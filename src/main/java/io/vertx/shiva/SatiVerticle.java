@@ -48,8 +48,29 @@ public class SatiVerticle extends AbstractVerticle {
                         String url = "http://127.0.0.1:8484/api/v1/task/assign/" + cases.getString("caseid");
                         //System.out.println(url);
                         WebClient client =  WebClient.create(url);
-                        int status = client.get().getStatus();
+                        //int status = client.get().getStatus();
                         //System.out.println(status);
+                    }
+              
+            }
+            else{
+                System.err.println("Sati query error! + " + Json.encodePrettily(ar.result()));
+            }
+        });
+
+        query = new JsonObject()   
+        .put("complete", true)
+        .put("closed", new JsonObject().put("$exists",false));
+        mongo.find("abmb_tracker", query, ar -> {
+            if (ar.succeeded()) {
+                //System.err.println(Json.encodePrettily(ar.result()));
+                if (ar.result().size()>0)
+                    for (JsonObject cases : ar.result()) {
+                        String url = "http://127.0.0.1:8484/api/v1/case/feedback/" + cases.getString("caseid");
+                        //System.out.println(url);
+                        WebClient client =  WebClient.create(url);
+                        // int status = client.get().getStatus();
+                        // System.out.println(url + status);
                     }
               
             }
@@ -59,39 +80,6 @@ public class SatiVerticle extends AbstractVerticle {
         });
          
     }
-    // public void initShiva()
-    // {
-    //     Future<List<JsonObject>> rsl = find();
-    //         System.err.println(Json.encodePrettily(rsl.result()));
-    //         for (JsonObject cases : rsl.result()) {
-    //             String url = "http://127.0.0.1:8484/api/v1/task/assign/" + cases.getString("caseid");
-    //             System.out.println(url);
-    //             WebClient client =  WebClient.create(url);
-    //             int status = client.get().getStatus();
-    //             System.out.println(status);
-    //         }
-    // }
-
-    // private Future<List<JsonObject>> find() {
-    //     Future<List<JsonObject>> future = Future.future();
-    //     JsonObject query = new JsonObject()             
-    //     .put("complete", false);
-    //     mongo.find("abmb_tracker", query, ar -> {
-    //         if (ar.succeeded()) {
-    //             future.handle(
-    //                 Future.succeededFuture(ar.result())
-    //             );
-              
-    //         }
-    //         else{
-    //             future.handle(
-    //                 Future.failedFuture(Json.encodePrettily(ar.result()))
-    //             );
-    //         }
-    //     });
-
-     
-    //     return future;
-    // }
+  
 
 }

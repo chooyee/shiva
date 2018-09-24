@@ -8,10 +8,10 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.ext.mongo.MongoClient;
-import io.vertx.ext.web.handler.AuthHandler;
 
 import java.util.List;
 import java.util.ArrayList;
+import org.apache.cxf.jaxrs.client.WebClient;
 
 public class FinalCase extends InitCase{
 
@@ -61,12 +61,28 @@ public class FinalCase extends InitCase{
         });
     }
 
+    public void startFinale(String caseId, Handler<AsyncResult<JsonObject>> aHandler)
+    {
+        finale(caseId, finalHandler->{
+            if (finalHandler.succeeded())
+            {
+                updateDBStatus(caseId, updateHandler->{});
+                aHandler.handle(Future.succeededFuture(finalHandler.result()));
+            }
+            else
+            {
+                errorLog(caseId, Json.encodePrettily(finalHandler.cause()), updateHandler->{});
+                aHandler.handle(Future.failedFuture(finalHandler.cause()));
+            }
+        });
+        
+    }
     /**
      * Package case to json object to pass to DBOS
      * @param caseId
      * @param finalHandler
      */
-    public void finale(String caseId, Handler<AsyncResult<JsonObject>> finalHandler)
+    private void finale(String caseId, Handler<AsyncResult<JsonObject>> finalHandler)
     {
         JsonObject finObj = new JsonObject();
         //Parent Case
@@ -149,12 +165,63 @@ public class FinalCase extends InitCase{
 
     }
 
+    private void updateDBStatus(String caseId, Handler<AsyncResult<String>> aHandler)
+    {
+        JsonObject query = new JsonObject()
+        .put("caseid", caseId);
+        
+        JsonObject update = new JsonObject().put("$set", new JsonObject()
+        .put("close", true));
+        //.put("feedbackMsg", msg));
+
+        mongo.updateCollection("abmb_tracker", query, update, res -> {
+            System.err.println(Json.encodePrettily(res.result()));
+            aHandler.handle(Future.succeededFuture("Update sucessfull!")); 
+        });
+    }
+
+    private void errorLog(String caseId, String errorMsg, Handler<AsyncResult<String>> aHandler)
+    {
+        isCaseExists(caseId, ar->{
+            if (ar.succeeded()){
+                JsonObject document = new JsonObject()
+                .put("caseId", caseId)
+                .put("errorMsg", errorMsg);
+
+                if (ar.result()!=null)
+                {
+                    String objectId = new JsonObject(ar.result().getValue("_id").toString()).getString("$oid");
+                    document.put("_id", objectId);
+                }
+                mongo.save("abmb_feedback_log", document, res -> {
+                    if (res.succeeded()) {
+                        aHandler.handle(Future.succeededFuture("Update sucessfull!")); 
+                    } else {
+                        aHandler.handle(Future.failedFuture(res.cause()));
+                    }
+                });
+            }
+        });
+    }
+
+    private void isCaseExists(String caseId, Handler<AsyncResult<JsonObject>> aHandler){
+        JsonObject query = new JsonObject()
+        .put("caseId", caseId);
+        mongo.findOne("abmb_feedback_log", query, null, tar -> {
+            if (tar.succeeded()) {
+                aHandler.handle(Future.succeededFuture(tar.result()));
+            }
+            else{
+                aHandler.handle(Future.failedFuture(tar.cause()));
+            }
+        });
+    }
     /**
      * Put email address to action
      * @param caseObj
      * @param finalHandler
      */
-    public void PrepareFinalCase(JsonObject caseObj, Handler<AsyncResult<JsonObject>> finalHandler){
+    private void PrepareFinalCase(JsonObject caseObj, Handler<AsyncResult<JsonObject>> finalHandler){
         JsonArray newEvents =  new JsonArray();
         List<Future> futures = new ArrayList<>();
 
@@ -177,16 +244,18 @@ public class FinalCase extends InitCase{
                          */
                         if (event.containsKey("taskId"))
                         {
-                            getTask(event, taskHandler->{
-                                if (taskHandler.succeeded())
-                                {
-                                    newEvents.add(taskHandler.result());
-                                    uFuture.complete();
-                                }
-                                else{
-                                    uFuture.fail(taskHandler.cause());
-                                }
-                            });
+                            newEvents.add(getTask(event));
+                            uFuture.complete();
+                            // getTask(event, taskHandler->{
+                            //     if (taskHandler.succeeded())
+                            //     {
+                            //         newEvents.add(taskHandler.result());
+                            //         uFuture.complete();
+                            //     }
+                            //     else{
+                            //         uFuture.fail(taskHandler.cause());
+                            //     }
+                            // });
                          
                         }
                         else{
@@ -245,26 +314,34 @@ public class FinalCase extends InitCase{
         
     }
 
-   private void getTask(JsonObject event, Handler<AsyncResult<JsonObject>> taskHandler)
-   {
-    String taskId = new JsonObject(event.getValue("taskId").toString()).getString("$oid");
-                        
-    JsonObject query = new JsonObject()
-    .put("_id", new JsonObject().put("$oid", taskId))
-    .put("form", new JsonObject().put("$exists",true));
-    mongo.findOne("tasks", query, null, tar -> {
-        if (tar.succeeded()) {
-            if (tar.result() != null)
-            {
-                event.put("variables", tar.result().getJsonObject("form").getJsonArray("fields")); 
-            }
-            taskHandler.handle(Future.succeededFuture(event));
-        }
-        else{
-            taskHandler.handle(Future.failedFuture(tar.cause()));
-        }
-    });
-   }
+    private JsonObject getTask(JsonObject event)
+    {
+        String url = "http://localhost:8089/api/v1/sync/task";
+        WebClient client =  WebClient.create(url);
+        client.type("application/json");
+        return new JsonObject(client.post(Json.encodePrettily(event), String.class));
+    }
+
+//    private void getTask(JsonObject event, Handler<AsyncResult<JsonObject>> taskHandler)
+//    {
+//         String taskId = new JsonObject(event.getValue("taskId").toString()).getString("$oid");
+                            
+//         JsonObject query = new JsonObject()
+//         .put("_id", new JsonObject().put("$oid", taskId))
+//         .put("form", new JsonObject().put("$exists",true));
+//         mongo.findOne("tasks", query, null, tar -> {
+//             if (tar.succeeded()) {
+//                 if (tar.result() != null)
+//                 {
+//                     event.put("variables", tar.result().getJsonObject("form").getJsonArray("fields")); 
+//                 }
+//                 taskHandler.handle(Future.succeededFuture(event));
+//             }
+//             else{
+//                 taskHandler.handle(Future.failedFuture(tar.cause()));
+//             }
+//         });
+//    }
 
    private JsonArray addValueName(JsonObject lastEvent)
    {

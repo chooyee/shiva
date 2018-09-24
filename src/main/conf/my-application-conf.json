@@ -2,5 +2,9 @@
     "http.port": 8484,
     "db_name": "signavio",
     "connection_string": "mongodb://signavio:signavio@127.0.0.1:27017",
+    "mongo_host": "127.0.0.1:27017",
+    "mongo_port": "27017",
+    "mongo_user": "signavio",
+    "mongo_pwd": "signavio",
     "test_user" : "leechooyee@alliancefg.com"
   }

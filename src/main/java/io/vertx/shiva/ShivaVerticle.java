@@ -100,6 +100,7 @@ public class ShivaVerticle extends AbstractVerticle {
     router.post("/api/v1/case/new").handler(this::initCase);
     router.get("/api/v1/task/unassigned/:caseid").handler(this::getUnAssignedTask); 
     router.get("/api/v1/task/assign/:caseid").handler(this::setAssignee);  
+    router.get("/api/v1/case/feedback/:caseid").handler(this::feedback2DBOS);  
 
     // router.get("/api/v1/test/:id/:newCaseName").handler(this::test_post_trigger);
     // router.post("/api/v1/test/posttrigger").handler(this::test_post_trigger);
@@ -137,13 +138,31 @@ public class ShivaVerticle extends AbstractVerticle {
     mongo.close();
   }
 
+  private void feedback2DBOS(RoutingContext routingContext)
+  {
+    final String id = routingContext.request().getParam("caseid");
+    new FinalCase(mongo).startFinale(id, finalHandler ->{
+      if (finalHandler.succeeded())
+        routingContext.response()
+        .setStatusCode(200)
+        .putHeader("content-type", "application/json; charset=utf-8")
+        .end(Json.encodePrettily(finalHandler.result()));
+      else
+        routingContext.response()
+        .setStatusCode(418)
+        .putHeader("content-type", "application/json; charset=utf-8")
+        .end(Json.encodePrettily(finalHandler.cause()));
+    });
+
+  }
+
   //=============================================================================================
   //#region Test Method
   //=============================================================================================
   private void test_final_case(RoutingContext routingContext)
   {
     final String id = routingContext.request().getParam("caseid");
-    new FinalCase(mongo).finale(id, finalHandler ->{
+    new FinalCase(mongo).startFinale(id, finalHandler ->{
       if (finalHandler.succeeded())
         routingContext.response()
         .setStatusCode(200)
@@ -232,15 +251,19 @@ public class ShivaVerticle extends AbstractVerticle {
     Whisky whisky = caseWhisky(newCaseName);
     UserHelper.getUserTokenByID(mongo, id, token -> {
       if (token.succeeded()){
-        new WebClientPost().postJson("localhost", "/api/v1/alliancebankofmalaysia/cases", 8080, token.result(), whisky, ar -> {
-          if (ar.succeeded()) {
-            routingContext.response()
-            .setStatusCode(200)
-            .putHeader("content-type", "application/json; charset=utf-8")
-            .end(ar.result());
-          }     
-        });
-      
+        // new WebClientPost().postJson("localhost", "/api/v1/alliancebankofmalaysia/cases", 8080, token.result(), whisky, ar -> {
+        //   if (ar.succeeded()) {
+        //     routingContext.response()
+        //     .setStatusCode(200)
+        //     .putHeader("content-type", "application/json; charset=utf-8")
+        //     .end(ar.result());
+        //   }     
+        // });
+        String rsl = WebClientHelper.postJson("http://localhost:8080/api/v1/alliancebankofmalaysia/cases", token.result(), whisky);
+        routingContext.response()
+        .setStatusCode(200)
+        .putHeader("content-type", "application/json; charset=utf-8")
+        .end(rsl);
       }
       else{
         routingContext.response()

@@ -21,6 +21,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
+import io.vertx.core.Future;
+import io.vertx.core.CompositeFuture;
+
 @ExtendWith(VertxExtension.class)
 public class TestMainVerticle {
 
@@ -30,7 +33,9 @@ public class TestMainVerticle {
    
     //System.err.println(Json.encodePrettily(config));
     vertx.deployVerticle(new ShivaVerticle(),new DeploymentOptions().setConfig(config), testContext.succeeding(id -> testContext.completeNow()));
+   
   }
+
 
   @Test
   @DisplayName("Should start a Web Server on port 8484")

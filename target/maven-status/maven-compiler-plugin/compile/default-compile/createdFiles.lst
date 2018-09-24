@@ -1,6 +1,7 @@
 io\vertx\shiva\SatiVerticle.class
 io\vertx\shiva\liquor\Field.class
 io\vertx\shiva\signavio\FinalCase.class
+io\vertx\shiva\MongoSyncVerticle.class
 io\vertx\shiva\liquor\Data.class
 io\vertx\shiva\liquor\TriggerInstance.class
 io\vertx\util\Runner.class
