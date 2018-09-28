@@ -14,21 +14,12 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.text.SimpleDateFormat;
 
-public class Case 
+public class Case extends Base
 {
-    protected MongoClient mongo;
-
-    public MongoClient getMongo() {
-        return mongo;
-    }
-
-    public void setMongo(MongoClient mongo) {
-        this.mongo = mongo;
-    }
 
     public Case(MongoClient mongo)
     {
-        this.mongo = mongo;
+        super(mongo);
     }
 
     /**
@@ -39,7 +30,7 @@ public class Case
      */
     public void getCase(String caseID,Handler<AsyncResult<JsonObject>> aHandler) 
     {
-        mongo.findOne("cases", new JsonObject().put("_id", new JsonObject().put("$oid",caseID)), null, ar -> {
+        mongo.findOne(CollectionHelper.CASES.collection(), new JsonObject().put("_id", new JsonObject().put("$oid",caseID)), null, ar -> {
             if (ar.succeeded()) {               
                 aHandler.handle(Future.succeededFuture(ar.result())); 
             }
@@ -86,7 +77,7 @@ public class Case
                                      */
 
                                     //Log to DB for success case
-                                    mongo.insert("abmb_set_assignee_success", result, insertar -> {
+                                    mongo.insert(CollectionHelper.ASSIGN_SUCCESS.collection(), result, insertar -> {
                                     
                                     });
                                 }
@@ -101,7 +92,7 @@ public class Case
                                     .put("taskId",taskId)
                                     .put("groupName",groupName)
                                     .put("date", new JsonObject().put("$date", isoDate));
-                                    mongo.insert("abmb_set_assignee_failed", document, insertar -> {
+                                    mongo.insert(CollectionHelper.ASSIGN_FAILED.collection(), document, insertar -> {
                                         // if (insertar.succeeded()) {
                                         //     aHandler.handle(Future.succeededFuture(insertar.result())); 
                                         // } else {
@@ -158,7 +149,7 @@ public class Case
     public void getWorkflow(String workflowID, Handler<AsyncResult<JsonObject>> aHandler) 
     {
         JsonObject query = new JsonObject().put("_id", new JsonObject().put("$oid",workflowID));
-        mongo.findOne("workflows", query, null, ar -> {
+        mongo.findOne(CollectionHelper.WORKFLOWS.collection(), query, null, ar -> {
             if (ar.succeeded()) {
                 aHandler.handle(Future.succeededFuture(ar.result())); 
             }
@@ -209,7 +200,7 @@ public class Case
         JsonObject update = new JsonObject().put("$set", new JsonObject()
         .put("complete", true));
 
-        mongo.updateCollection("abmb_tracker", query, update, res -> {
+        mongo.updateCollection(CollectionHelper.TRACKER.collection(), query, update, res -> {
             //System.err.println(Json.encodePrettily(res.result()));
             aHandler.handle(Future.succeededFuture("Update sucessfull!")); 
         });

@@ -64,7 +64,7 @@ public class InitCase extends Case
 
     private void auditLog(JsonObject incomingObject, Handler<AsyncResult<String>> aHandler)
     {
-        mongo.insert("abmb_init_log", incomingObject, insertar -> {
+        mongo.insert(CollectionHelper.INIT_TRACK.collection(), incomingObject, insertar -> {
             if (insertar.succeeded()) {
                 aHandler.handle(Future.succeededFuture(insertar.result())); 
             } else {
@@ -83,7 +83,7 @@ public class InitCase extends Case
     {
         JsonObject caseObj = new JsonObject(resultStr);
         
-        mongo.findOne("abmb_user_branch", new JsonObject().put("email", userid), null, ar -> {
+        mongo.findOne(CollectionHelper.USER_BRANCH.collection(), new JsonObject().put("email", userid), null, ar -> {
             if (ar.succeeded()) {
 
                 JsonObject document = new JsonObject()
@@ -92,7 +92,7 @@ public class InitCase extends Case
                 .put("branch", ar.result().getString("branch"))
                 .put("complete", false);
                 
-                mongo.insert("abmb_tracker", document, insertar -> {
+                mongo.insert(CollectionHelper.TRACKER.collection(), document, insertar -> {
                     if (ar.succeeded()) {
                         aHandler.handle(Future.succeededFuture(insertar.result())); 
                     } else {

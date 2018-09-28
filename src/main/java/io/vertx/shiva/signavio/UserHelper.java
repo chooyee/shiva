@@ -20,7 +20,7 @@ public class UserHelper{
      */
     public static void getUserToken(MongoClient mongo, String id, Handler<AsyncResult<String>> aHandler) {
     
-        mongo.findOne("users", new JsonObject().put("emailAddressLower", id), null, ar -> {
+        mongo.findOne(Base.CollectionHelper.USERS.collection(), new JsonObject().put("emailAddressLower", id), null, ar -> {
           if (ar.succeeded()) {
             if (ar.result() == null) {
               aHandler.handle(Future.failedFuture("Connection succeeded but no result found!")); 
@@ -41,7 +41,7 @@ public class UserHelper{
      */
     public static void getUserTokenByID(MongoClient mongo, String id, Handler<AsyncResult<String>> aHandler) {
     
-      mongo.findOne("users", new JsonObject().put("emailAddressLower", id), null, ar->{
+      mongo.findOne(Base.CollectionHelper.USERS.collection(), new JsonObject().put("emailAddressLower", id), null, ar->{
         if (ar.succeeded()) {
             if (ar.result() == null) {
               aHandler.handle(Future.failedFuture("Connection succeeded but no result found!")); 
@@ -68,7 +68,7 @@ public class UserHelper{
     public static void getUserInfoByObjID(MongoClient mongo, String userObjectID, Handler<AsyncResult<JsonObject>> aHandler) {
     
       //.put("_id", new JsonObject().put("$oid","5b9a3ff14581670dace6e4f1"))//
-      mongo.findOne("users", new JsonObject().put("_id",  new JsonObject().put("$oid",userObjectID)),null, ar->{
+      mongo.findOne(Base.CollectionHelper.USERS.collection(), new JsonObject().put("_id",  new JsonObject().put("$oid",userObjectID)),null, ar->{
           if (ar.succeeded()) {
               if (ar.result() == null) {
                 aHandler.handle(Future.failedFuture("Connection succeeded but no result found!")); 
@@ -101,7 +101,7 @@ public class UserHelper{
     
       //.put("_id", new JsonObject().put("$oid","5b9a3ff14581670dace6e4f1"))//
       //System.err.println("getUserBranchByEmail : " + email);
-      mongo.findOne("abmb_user_branch", new JsonObject().put("email", email),null, ar->{
+      mongo.findOne(Base.CollectionHelper.USER_BRANCH.collection(), new JsonObject().put("email", email),null, ar->{
           if (ar.succeeded()) {
               if (ar.result() == null) {
                 aHandler.handle(Future.failedFuture("Connection succeeded but no result found!")); 
@@ -121,7 +121,7 @@ public class UserHelper{
 
     public static void getGroupInfo(MongoClient mongo, String groupName, Handler<AsyncResult<JsonObject>> aHandler)
     {
-      mongo.findOne("groups", new JsonObject().put("name", groupName ),null, ar->{
+      mongo.findOne(Base.CollectionHelper.GROUPS.collection(), new JsonObject().put("name", groupName ),null, ar->{
         if (ar.succeeded()) {
           aHandler.handle(Future.succeededFuture(ar.result())); 
         }
