@@ -66,6 +66,13 @@ public class WebClientHelper{
         return client.post(Json.encodePrettily(pojo), String.class);
        
     }
+    public static String postJson(String url, String json)
+    {
+        WebClient client =  WebClient.create(url);
+        client.type("application/json");
+        return client.post(json, String.class);
+       
+    }
     public static String putJson(String url, String authToken, Object pojo)
     {
         WebClient client =  WebClient.create(url);

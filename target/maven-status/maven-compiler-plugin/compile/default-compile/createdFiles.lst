@@ -1,4 +1,3 @@
-io\vertx\shiva\SatiVerticle.class
 io\vertx\shiva\liquor\Field.class
 io\vertx\shiva\signavio\FinalCase.class
 io\vertx\shiva\MongoSyncVerticle.class

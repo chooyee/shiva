@@ -43,10 +43,10 @@ public class InitCase extends Case
         final String newCaseName = jsonObj.getString("newCaseName");
         String fileID = "";
         JsonObject fileJson;
-        if (jsonObj.containsKey("eface"));
+        if (jsonObj.containsKey("efaces"));
         {
             String idfront = "";
-            JsonArray eface = jsonObj.getJsonArray("eface");
+            JsonArray eface = jsonObj.getJsonArray("efaces");
             //System.out.println(eface.size());
             for (int i = 0 ; i < eface.size(); i++) {
                 JsonObject obj = eface.getJsonObject(i);

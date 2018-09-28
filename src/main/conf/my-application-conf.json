@@ -1,5 +1,5 @@
 {
-    "http.port": 8484,
+    "https.port": 443,
     "db_name": "signavio",
     "connection_string": "mongodb://signavio:signavio@127.0.0.1:27017",
     "mongo_host": "127.0.0.1:27017",

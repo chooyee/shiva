@@ -47,6 +47,7 @@ public class UserHelper{
               aHandler.handle(Future.failedFuture("Connection succeeded but no result found!")); 
             }
             else {
+              //System.out.println(ar.result().getString("token"));
               aHandler.handle(Future.succeededFuture(ar.result().getString("token"))); 
             }
         }

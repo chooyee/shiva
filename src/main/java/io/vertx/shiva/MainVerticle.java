@@ -27,15 +27,15 @@ public class MainVerticle extends AbstractVerticle {
     public void start(Future<Void> fut) {
 
         System.out.println("Main verticle has started, let's deploy some others...");
-        
-        CompositeFuture.all(deployHelper(ShivaVerticle.class.getName()),
-            deployHelper(SatiVerticle.class.getName()), deployHelper(MongoSyncVerticle.class.getName())).setHandler(result -> { 
-                if(result.succeeded()){
-                    fut.complete();
-                } else {
-                    fut.fail(result.cause());
-                }
-        });
+        deployHelper(ShivaVerticle.class.getName());
+        // CompositeFuture.all(deployHelper(ShivaVerticle.class.getName()),
+        //     deployHelper(SatiVerticle.class.getName()), deployHelper(MongoSyncVerticle.class.getName())).setHandler(result -> { 
+        //         if(result.succeeded()){
+        //             fut.complete();
+        //         } else {
+        //             fut.fail(result.cause());
+        //         }
+        // });
 
     }
 

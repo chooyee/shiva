@@ -1,7 +1,6 @@
 package io.vertx.shiva;
 import io.vertx.shiva.liquor.*;
 import io.vertx.shiva.signavio.*;
-import io.vertx.shiva.util.*;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
@@ -30,7 +29,16 @@ import java.io.Reader;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
+import io.vertx.core.http.HttpServerOptions;
+import io.vertx.core.net.KeyCertOptions;
+import io.vertx.core.net.PemKeyCertOptions;
+import io.vertx.core.net.TCPSSLOptions;
+
 public class ShivaVerticle extends AbstractVerticle {
+
+  private static final int HTTP1_PORT = 8527;
+  private static final int HTTP2_PORT = 9443;
+  private String host = "localhost";
 
   public static final String COLLECTION = "signavio";
   private MongoClient mongo;
@@ -100,13 +108,7 @@ public class ShivaVerticle extends AbstractVerticle {
     router.post("/api/v1/case/new").handler(this::initCase);
     router.get("/api/v1/task/unassigned/:caseid").handler(this::getUnAssignedTask); 
     router.get("/api/v1/task/assign/:caseid").handler(this::setAssignee);  
-    router.get("/api/v1/case/feedback/:caseid").handler(this::feedback2DBOS);  
 
-    // router.get("/api/v1/test/:id/:newCaseName").handler(this::test_post_trigger);
-    // router.post("/api/v1/test/posttrigger").handler(this::test_post_trigger);
-    // router.get("/api/v1/test/upload").handler(this::test_signavio_upload);
-    // router.get("/api/v1/test/mongo").handler(this::test_mongo_find);
-    router.get("/api/v1/test/case/final/:caseid").handler(this::test_final_case);
     router.get("/api/v1/test/case/get/:caseid").handler(this::test_get_case);
 
 
@@ -114,14 +116,54 @@ public class ShivaVerticle extends AbstractVerticle {
 
     // Create the HTTP server and pass the "accept" method to the request handler.
     vertx
-        .createHttpServer()
+        .createHttpServer(createOptions(true))
         .requestHandler(router::accept)
         .listen(
             // Retrieve the port from the configuration,
             // default to 8080.
-            config().getInteger("http.port", 8484),
+            config().getInteger("https.port", 4443),
             next
         );
+  }
+
+  private HttpServerOptions createOptions(boolean http2) {
+    HttpServerOptions serverOptions = new HttpServerOptions()
+        .setPort(http2 ? HTTP2_PORT : HTTP1_PORT)
+        .setHost(host);
+    if (http2) {
+        serverOptions
+        .setSsl(true)
+        .setEnabledSecureTransportProtocols(new HashSet<String>(TCPSSLOptions.DEFAULT_ENABLED_SECURE_TRANSPORT_PROTOCOLS))
+        .setKeyCertOptions(new PemKeyCertOptions().setCertPath("tls/server-cert.pem").setKeyPath("tls/server-key.pem"));
+      
+        serverOptions.addEnabledCipherSuite("TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256").addEnabledCipherSuite("TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256")
+        .addEnabledCipherSuite("TLS_RSA_WITH_AES_128_CBC_SHA256").addEnabledCipherSuite("TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA256")
+        .addEnabledCipherSuite("TLS_ECDH_RSA_WITH_AES_128_CBC_SHA256").addEnabledCipherSuite("TLS_DHE_DSS_WITH_AES_128_CBC_SHA256")
+        .addEnabledCipherSuite("TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA").addEnabledCipherSuite("TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA")
+        .addEnabledCipherSuite("TLS_RSA_WITH_AES_128_CBC_SHA").addEnabledCipherSuite("TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA")
+        .addEnabledCipherSuite("TLS_ECDH_RSA_WITH_AES_128_CBC_SHA").addEnabledCipherSuite("TLS_DHE_DSS_WITH_AES_128_CBC_SHA")
+        .addEnabledCipherSuite("TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256").addEnabledCipherSuite("TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256")
+        .addEnabledCipherSuite("TLS_RSA_WITH_AES_128_GCM_SHA256").addEnabledCipherSuite("TLS_ECDH_ECDSA_WITH_AES_128_GCM_SHA256")
+        .addEnabledCipherSuite("TLS_ECDH_RSA_WITH_AES_128_GCM_SHA256").addEnabledCipherSuite("TLS_DHE_DSS_WITH_AES_128_GCM_SHA256")
+        .addEnabledCipherSuite("TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA").addEnabledCipherSuite("SSL_RSA_WITH_3DES_EDE_CBC_SHA")
+        .addEnabledCipherSuite("TLS_ECDH_ECDSA_WITH_3DES_EDE_CBC_SHA").addEnabledCipherSuite("TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA")
+        .addEnabledCipherSuite("SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA").addEnabledCipherSuite("TLS_ECDHE_ECDSA_WITH_RC4_128_SHA")
+        .addEnabledCipherSuite("SSL_RSA_WITH_RC4_128_SHA").addEnabledCipherSuite("TLS_ECDH_ECDSA_WITH_RC4_128_SHA")
+        .addEnabledCipherSuite("TLS_ECDH_RSA_WITH_RC4_128_SHA").addEnabledCipherSuite("SSL_RSA_WITH_RC4_128_MD5")
+        .addEnabledCipherSuite("TLS_EMPTY_RENEGOTIATION_INFO_SCSV").addEnabledCipherSuite("TLS_ECDH_anon_WITH_RC4_128_SHA")
+        .addEnabledCipherSuite("SSL_DH_anon_WITH_RC4_128_MD5").addEnabledCipherSuite("SSL_RSA_WITH_DES_CBC_SHA")
+        .addEnabledCipherSuite("SSL_DHE_RSA_WITH_DES_CBC_SHA").addEnabledCipherSuite("SSL_DHE_DSS_WITH_DES_CBC_SHA")
+        .addEnabledCipherSuite("SSL_DH_anon_WITH_DES_CBC_SHA").addEnabledCipherSuite("SSL_RSA_EXPORT_WITH_DES40_CBC_SHA")
+        .addEnabledCipherSuite("SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA").addEnabledCipherSuite("SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA")
+        .addEnabledCipherSuite("SSL_DH_anon_EXPORT_WITH_DES40_CBC_SHA").addEnabledCipherSuite("SSL_RSA_EXPORT_WITH_RC4_40_MD5")
+        .addEnabledCipherSuite("SSL_DH_anon_EXPORT_WITH_RC4_40_MD5").addEnabledCipherSuite("TLS_KRB5_WITH_3DES_EDE_CBC_SHA")
+        .addEnabledCipherSuite("TLS_KRB5_WITH_3DES_EDE_CBC_MD5").addEnabledCipherSuite("TLS_KRB5_WITH_RC4_128_SHA")
+        .addEnabledCipherSuite("TLS_KRB5_WITH_RC4_128_MD5").addEnabledCipherSuite("TLS_KRB5_WITH_DES_CBC_SHA")
+        .addEnabledCipherSuite("TLS_KRB5_WITH_DES_CBC_MD5").addEnabledCipherSuite("TLS_KRB5_EXPORT_WITH_DES_CBC_40_SHA")
+        .addEnabledCipherSuite("TLS_KRB5_EXPORT_WITH_DES_CBC_40_MD5").addEnabledCipherSuite("TLS_KRB5_EXPORT_WITH_RC4_40_SHA")
+        .addEnabledCipherSuite("TLS_KRB5_EXPORT_WITH_RC4_40_MD5");
+    }
+    return serverOptions;
   }
 
   private void completeStartup(AsyncResult<HttpServer> http, Future<Void> fut) {
@@ -138,48 +180,15 @@ public class ShivaVerticle extends AbstractVerticle {
     mongo.close();
   }
 
-  private void feedback2DBOS(RoutingContext routingContext)
-  {
-    final String id = routingContext.request().getParam("caseid");
-    new FinalCase(mongo).startFinale(id, finalHandler ->{
-      if (finalHandler.succeeded())
-        routingContext.response()
-        .setStatusCode(200)
-        .putHeader("content-type", "application/json; charset=utf-8")
-        .end(Json.encodePrettily(finalHandler.result()));
-      else
-        routingContext.response()
-        .setStatusCode(418)
-        .putHeader("content-type", "application/json; charset=utf-8")
-        .end(Json.encodePrettily(finalHandler.cause()));
-    });
-
-  }
+  
 
   //=============================================================================================
   //#region Test Method
   //=============================================================================================
-  private void test_final_case(RoutingContext routingContext)
-  {
-    final String id = routingContext.request().getParam("caseid");
-    new FinalCase(mongo).startFinale(id, finalHandler ->{
-      if (finalHandler.succeeded())
-        routingContext.response()
-        .setStatusCode(200)
-        .putHeader("content-type", "application/json; charset=utf-8")
-        .end(Json.encodePrettily(finalHandler.result()));
-      else
-        routingContext.response()
-        .setStatusCode(418)
-        .putHeader("content-type", "application/json; charset=utf-8")
-        .end(Json.encodePrettily(finalHandler.cause()));
-    });
 
-  }
 
   private void test_get_case(RoutingContext routingContext)
   {
-    
     final String id = routingContext.request().getParam("caseid");
     new Case(mongo).getCase(id, ar->{
       if (ar.succeeded())
@@ -358,11 +367,16 @@ public class ShivaVerticle extends AbstractVerticle {
               .end(aHandler.result());
             });
           }
-         
+          else{
+             routingContext.response()
+              .setStatusCode(200)
+              .putHeader("content-type", "application/json; charset=utf-8")
+              .end(Json.encodePrettily(aHandler.cause()));
+          }
         });
        
       } else {
-        routingContext.response().setStatusCode(404).end();
+        routingContext.response().setStatusCode(404).end(Json.encodePrettily(ar.cause()));
       }
     });
   }
