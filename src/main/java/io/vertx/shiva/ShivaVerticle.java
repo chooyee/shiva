@@ -225,90 +225,90 @@ public class ShivaVerticle extends AbstractVerticle {
     });
   }
 
-  private void test_signavio_upload(RoutingContext routingContext)
-  {
-    UserHelper.getUserTokenByID(mongo, config().getString("test_user") , token -> {
-      String result = WebClientHelper.uploadToSignavioTest(token.result());
-      routingContext.response()
-      .setStatusCode(200)
-      .putHeader("content-type", "application/json; charset=utf-8")
-      .end(result);
-    });
+  // private void test_signavio_upload(RoutingContext routingContext)
+  // {
+  //   UserHelper.getUserTokenByID(mongo, config().getString("test_user") , token -> {
+  //     String result = WebClientHelper.uploadToSignavioTest(token.result());
+  //     routingContext.response()
+  //     .setStatusCode(200)
+  //     .putHeader("content-type", "application/json; charset=utf-8")
+  //     .end(result);
+  //   });
    
-  }
+  // }
 
-  private void test_post_trigger(RoutingContext routingContext) 
-  {
-    final String id = routingContext.request().getParam("id");
-    final String newCaseName = routingContext.request().getParam("newCaseName");
+  // private void test_post_trigger(RoutingContext routingContext) 
+  // {
+  //   final String id = routingContext.request().getParam("id");
+  //   final String newCaseName = routingContext.request().getParam("newCaseName");
 
-    newCase(routingContext, id, newCaseName);
+  //   newCase(routingContext, id, newCaseName);
   
-  }//end post trigger
-  private void postJson(RoutingContext routingContext) 
-  {
-    JsonObject jsonStr = routingContext.getBodyAsJson();
-    final String id = jsonStr.getString("id");
-    final String newCaseName = jsonStr.getString("newCaseName");
+  // }//end post trigger
+  // private void postJson(RoutingContext routingContext) 
+  // {
+  //   JsonObject jsonStr = routingContext.getBodyAsJson();
+  //   final String id = jsonStr.getString("id");
+  //   final String newCaseName = jsonStr.getString("newCaseName");
 
-    newCase(routingContext, id, newCaseName);
+  //   newCase(routingContext, id, newCaseName);
   
-  }//end postJson
+  // }//end postJson
 
-  private void newCase(RoutingContext routingContext, String id, String newCaseName)
-  {
-    Whisky whisky = caseWhisky(newCaseName);
-    UserHelper.getUserTokenByID(mongo, id, token -> {
-      if (token.succeeded()){
-        // new WebClientPost().postJson("localhost", "/api/v1/alliancebankofmalaysia/cases", 8080, token.result(), whisky, ar -> {
-        //   if (ar.succeeded()) {
-        //     routingContext.response()
-        //     .setStatusCode(200)
-        //     .putHeader("content-type", "application/json; charset=utf-8")
-        //     .end(ar.result());
-        //   }     
-        // });
-        String rsl = WebClientHelper.postJson("http://localhost:8080/api/v1/alliancebankofmalaysia/cases", token.result(), whisky);
-        routingContext.response()
-        .setStatusCode(200)
-        .putHeader("content-type", "application/json; charset=utf-8")
-        .end(rsl);
-      }
-      else{
-        routingContext.response()
-        .setStatusCode(200)
-        .putHeader("content-type", "application/json; charset=utf-8")
-        .end(token.cause().getMessage());
-      }
-    });
-  }
+  // private void newCase(RoutingContext routingContext, String id, String newCaseName)
+  // {
+  //   Whisky whisky = caseWhisky(newCaseName);
+  //   UserHelper.getUserTokenByID(mongo, id, token -> {
+  //     if (token.succeeded()){
+  //       // new WebClientPost().postJson("localhost", "/api/v1/alliancebankofmalaysia/cases", 8080, token.result(), whisky, ar -> {
+  //       //   if (ar.succeeded()) {
+  //       //     routingContext.response()
+  //       //     .setStatusCode(200)
+  //       //     .putHeader("content-type", "application/json; charset=utf-8")
+  //       //     .end(ar.result());
+  //       //   }     
+  //       // });
+  //       String rsl = WebClientHelper.postJson("http://localhost:8080/api/v1/alliancebankofmalaysia/cases", token.result(), whisky);
+  //       routingContext.response()
+  //       .setStatusCode(200)
+  //       .putHeader("content-type", "application/json; charset=utf-8")
+  //       .end(rsl);
+  //     }
+  //     else{
+  //       routingContext.response()
+  //       .setStatusCode(200)
+  //       .putHeader("content-type", "application/json; charset=utf-8")
+  //       .end(token.cause().getMessage());
+  //     }
+  //   });
+  // }
 
  
-  private Whisky caseWhisky(String newCaseName)
-  {
-    try(Reader reader = new InputStreamReader(ShivaVerticle.class.getClassLoader().getResourceAsStream("test.json"), "UTF-8")){
-      Gson gson = new GsonBuilder().create();
-      Whisky whisky = gson.fromJson(reader, Whisky.class);
-      List<Field> fields = whisky.triggerInstance.data.formInstance.value.getFields();
-      for (int i = 0; i < fields.size(); i++) {
-        Field f = fields.get(i);
-        // System.out.println(gson.toJson(f));
-        // System.out.println(f.getName().equals("Name"));
-        // System.out.println(f.getName());
-        if (f.getName().equals("Name"))
-        {
-          f.setValue(newCaseName);
-          fields.set(i, f);
-        }
-      }//end for
-      whisky.triggerInstance.data.formInstance.value.setFields(fields);
-      return whisky;
+  // private Whisky caseWhisky(String newCaseName)
+  // {
+  //   try(Reader reader = new InputStreamReader(ShivaVerticle.class.getClassLoader().getResourceAsStream("test.json"), "UTF-8")){
+  //     Gson gson = new GsonBuilder().create();
+  //     Whisky whisky = gson.fromJson(reader, Whisky.class);
+  //     List<Field> fields = whisky.triggerInstance.data.formInstance.value.getFields();
+  //     for (int i = 0; i < fields.size(); i++) {
+  //       Field f = fields.get(i);
+  //       // System.out.println(gson.toJson(f));
+  //       // System.out.println(f.getName().equals("Name"));
+  //       // System.out.println(f.getName());
+  //       if (f.getName().equals("Name"))
+  //       {
+  //         f.setValue(newCaseName);
+  //         fields.set(i, f);
+  //       }
+  //     }//end for
+  //     whisky.triggerInstance.data.formInstance.value.setFields(fields);
+  //     return whisky;
       
-    }//end try
-    catch (IOException e) {
-     return null;
-    }//end catch
-  }
+  //   }//end try
+  //   catch (IOException e) {
+  //    return null;
+  //   }//end catch
+  // }
 
   //#endregion
   //=============================================================================================

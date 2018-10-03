@@ -62,7 +62,7 @@ public class WebClientHelper{
     {
         WebClient client =  WebClient.create(url);
         client.header("Authorization", authToken);
-        client.type("application/json");
+        client.type("application/json"); 
         return client.post(Json.encodePrettily(pojo), String.class);
        
     }

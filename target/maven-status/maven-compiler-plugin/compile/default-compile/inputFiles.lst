@@ -3,6 +3,7 @@ C:\Project\shiva\src\main\java\io\vertx\shiva\ShivaVerticle.java
 C:\Project\shiva\src\main\java\io\vertx\shiva\liquor\Data.java
 C:\Project\shiva\src\main\java\io\vertx\shiva\signavio\Base.java
 C:\Project\shiva\src\main\java\io\vertx\shiva\signavio\Case.java
+C:\Project\shiva\src\main\java\io\vertx\shiva\signavio\LogHelper.java
 C:\Project\shiva\src\main\java\io\vertx\shiva\util\WebClientPost.java
 C:\Project\shiva\src\main\java\io\vertx\shiva\signavio\WebClientHelper.java
 C:\Project\shiva\src\main\java\io\vertx\shiva\liquor\Type.java
@@ -16,4 +17,5 @@ C:\Project\shiva\src\main\java\io\vertx\util\Runner.java
 C:\Project\shiva\src\main\java\io\vertx\shiva\signavio\UserHelper.java
 C:\Project\shiva\src\main\java\io\vertx\shiva\signavio\InitCase.java
 C:\Project\shiva\src\main\java\io\vertx\shiva\signavio\SignavioApiPathHelper.java
+C:\Project\shiva\src\main\java\io\vertx\shiva\liquor\FieldBool.java
 C:\Project\shiva\src\main\java\io\vertx\shiva\liquor\TriggerInstance.java

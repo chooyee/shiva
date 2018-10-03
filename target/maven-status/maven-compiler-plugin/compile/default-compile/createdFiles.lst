@@ -1,10 +1,13 @@
+io\vertx\shiva\signavio\Base$LogTypeHelper.class
 io\vertx\shiva\liquor\Field.class
 io\vertx\shiva\signavio\FinalCase.class
 io\vertx\shiva\signavio\Base.class
+io\vertx\shiva\signavio\LogHelper.class
 io\vertx\shiva\liquor\TriggerInstance.class
 io\vertx\util\Runner.class
 io\vertx\shiva\liquor\Type.class
 io\vertx\shiva\signavio\SignavioApiPathHelper.class
+io\vertx\shiva\liquor\FieldBool.class
 io\vertx\shiva\liquor\FormInstance.class
 io\vertx\shiva\signavio\Base$CollectionHelper.class
 io\vertx\shiva\signavio\Case.class
