@@ -33,6 +33,7 @@ public class Base
         ASSIGN_FAILED("abmb_set_assignee_failed"),
         ASSIGN_SUCCESS("abmb_set_assignee_success"),
         WF_TRIGGER("abmb_workflow_trigger"),
+        CONFIG("abmb_config"),
         LOG("abmb_log");
        
     

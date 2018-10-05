@@ -14,6 +14,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.io.BufferedWriter;
+import java.util.Date;
+import java.text.SimpleDateFormat;
 // import io.vertx.util.Runner;
 
 import org.apache.commons.csv.CSVFormat;
@@ -34,11 +36,6 @@ public class InitCase extends Case
      */
     public void init(JsonObject jsonObj, String token, Handler<AsyncResult<String>> aHandler) 
     {
-        //JsonObject jsonStr = routingContext.getBodyAsJson();
-        auditLog(jsonObj, ah->{
-            
-        });
-        
         final String id = jsonObj.getString("id");
         //final String newCaseName = jsonObj.getString("newCaseName");
         String idFrontFileID = "";
@@ -50,10 +47,10 @@ public class InitCase extends Case
             String idfront = "";
             String idback = "";
             JsonArray eface = jsonObj.getJsonArray("efaces");
-            //System.out.println(eface.size());
+            
             for (int i = 0 ; i < eface.size(); i++) {
                 JsonObject obj = eface.getJsonObject(i);
-                //System.out.println(obj.encodePrettily());
+               
                 idfront = obj.getString("idfront");
                 idback = obj.getString("idback");
             }
@@ -67,7 +64,7 @@ public class InitCase extends Case
 
             JsonArray custList = getCustomerDetails(jsonObj);
             String filePath = genCSV(jsonObj.getJsonObject("application").getString("uuid"), custList);
-            System.err.println(filePath);
+          
             try{
                 byte[] bFile = Files.readAllBytes(Paths.get(filePath));
                 fileJson = new JsonObject(WebClientHelper.uploadToSignavio(bFile,"cus details.csv", token));
@@ -86,7 +83,7 @@ public class InitCase extends Case
         caseWhisky(getAMLCode(jsonObj), idFrontFileID, idBackFileID, idCusFileID, ar->{
             if (ar.succeeded())
             {
-                System.err.println("Pre Post to Signavio: " + ar.result());
+               
                 aHandler.handle(Future.succeededFuture(WebClientHelper.postJson(new SignavioApiPathHelper().getCases(), token, ar.result()))); 
             }
             else{
@@ -157,7 +154,7 @@ public class InitCase extends Case
             // {
             //     cust.put("facilityCodes", application.getJsonArray("application"));
             // }
-            System.err.println(custList);
+           
             return custList;
         }
 
@@ -247,8 +244,12 @@ public class InitCase extends Case
      
     }
 
-    private void auditLog(JsonObject incomingObject, Handler<AsyncResult<String>> aHandler)
+    public void auditLog(JsonObject incomingObject, Handler<AsyncResult<String>> aHandler)
     {
+        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss+00:00");                          
+        String isoDate = df.format(new Date());
+        incomingObject.put("date", new JsonObject().put("$date", isoDate));
+        
         mongo.insert(CollectionHelper.INIT_TRACK.collection(), incomingObject, insertar -> {
             if (insertar.succeeded()) {
                 aHandler.handle(Future.succeededFuture(insertar.result())); 
@@ -260,11 +261,13 @@ public class InitCase extends Case
 
     public void initWfTracker(String resultStr, String userid, Handler<AsyncResult<String>> aHandler) 
     {
+        System.err.println(userid);
+
         JsonObject caseObj = new JsonObject(resultStr);
         
         mongo.findOne(CollectionHelper.USER_BRANCH.collection(), new JsonObject().put("email", userid), null, ar -> {
             if (ar.succeeded()) {
-
+                System.err.println(ar.result());
                 JsonObject document = new JsonObject()
                 .put("caseid", caseObj.getString("id"))
                 .put("email", userid)
@@ -351,11 +354,9 @@ public class InitCase extends Case
                 fields.forEach(f->{
                     JsonObject field = (JsonObject) f;
                     for(int j=0;j<amlObjects.size();j++){
-                        System.err.println(field.getString("name").toLowerCase() + ":" + amlObjects.get(j).getString("eddCode").toLowerCase());
+                        
                         if (field.getString("name").toLowerCase().equals(amlObjects.get(j).getString("eddCode").toLowerCase()))
                         {
-                            //f.setValue("true");
-                            System.err.println("in");
                             field.put("value", true);
                         
                         }
