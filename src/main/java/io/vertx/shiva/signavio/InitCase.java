@@ -259,7 +259,7 @@ public class InitCase extends Case
         });
     }
 
-    public void initWfTracker(String resultStr, String userid, Handler<AsyncResult<String>> aHandler) 
+    public void initWfTracker(String resultStr, String userid, String branchCode, Handler<AsyncResult<String>> aHandler) 
     {
         System.err.println(userid);
 
@@ -271,7 +271,7 @@ public class InitCase extends Case
                 JsonObject document = new JsonObject()
                 .put("caseid", caseObj.getString("id"))
                 .put("email", userid)
-                .put("branch", ar.result().getString("branch"))
+                .put("branch", branchCode)
                 .put("complete", false);
                 
                 mongo.insert(CollectionHelper.TRACKER.collection(), document, insertar -> {

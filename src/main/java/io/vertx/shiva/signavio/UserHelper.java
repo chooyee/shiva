@@ -33,6 +33,22 @@ public class UserHelper{
         });
       
     }
+    public static void getAdminToken(MongoClient mongo, Handler<AsyncResult<String>> aHandler) {
+    
+      JsonObject config = Base.getConfig();
+      mongo.findOne(Base.CollectionHelper.USERS.collection(), new JsonObject().put("emailAddressLower", config.getString("signavio.admin")), null, ar -> {
+        if (ar.succeeded()) {
+          if (ar.result() == null) {
+            aHandler.handle(Future.failedFuture("Connection succeeded but no result found!")); 
+          }
+          else {
+            aHandler.handle(Future.succeededFuture(ar.result().getString("token"))); 
+          }
+        }
+        
+      });
+    
+    }
     /**
      * 
      * @param mongo

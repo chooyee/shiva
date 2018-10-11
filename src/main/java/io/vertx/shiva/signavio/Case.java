@@ -2,6 +2,7 @@ package io.vertx.shiva.signavio;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Handler;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
@@ -57,7 +58,7 @@ public class Case extends Base
                         /**
                          * Get task role name and creator branch to derrive Group Name
                          */
-                        getUserInfo(workflowId, roleVariableId, rar->{
+                        getAssigneeInfo(workflowId, caseId, roleVariableId, rar->{
                             String roleName = rar.result().getString("roleName");
                             String groupName = rar.result().getString("branch") + "_" + roleName;
                             String token = rar.result().getString("token");
@@ -116,8 +117,9 @@ public class Case extends Base
         
     }//end InitCase
  
-    public void getUserInfo(String workflowID, String roleID, Handler<AsyncResult<JsonObject>> aHandler)
+    public void getAssigneeInfo(String workflowID, String caseID, String roleID, Handler<AsyncResult<JsonObject>> aHandler)
     {
+        System.err.println(workflowID);
         getWorkflow(workflowID, ar->{
             if (ar.succeeded())
             {
@@ -132,14 +134,62 @@ public class Case extends Base
                     }
                 }
                 final String fRoleName = roleName;
-                UserHelper.getUserInfoByObjID(mongo, workflow.getString("creatorId"), userAr->{
-                    JsonObject result = new JsonObject()
-                    .put("roleName", fRoleName)
-                    .put("branch", userAr.result().getString("branch"))
-                    .put("token", userAr.result().getString("token"));
-                    aHandler.handle(Future.succeededFuture(result));
-                });
+
                 
+                // UserHelper.getUserInfoByObjID(mongo, workflow.getString("creatorId"), userAr->{
+                //     JsonObject result = new JsonObject()
+                //     .put("roleName", fRoleName)
+                //     .put("branch", userAr.result().getString("branch"))
+                //     .put("token", userAr.result().getString("token"));
+                //     aHandler.handle(Future.succeededFuture(result));
+                // });
+
+                 /**
+                 * Change to
+                 * 1. get admin token
+                 * 2. get branch name from branch code 
+                 */
+              
+                UserHelper.getAdminToken(mongo, userAr->{
+                    if (userAr.succeeded()){
+                        final String token = userAr.result();
+                       
+                        //Find branch code via caseid in abmb_tracker
+                        JsonObject query = new JsonObject().put("caseid", caseID );
+                        mongo.findOne(CollectionHelper.TRACKER.collection(), query, null, tar -> {
+                            if (tar.succeeded()) {
+                                String branchCode = tar.result().getString("branch");
+                                
+                                //Find branch name in abmb_branch
+                                JsonObject bquery = new JsonObject().put("code", branchCode );
+                                mongo.findOne(CollectionHelper.BRANCH.collection(), bquery, null, bar -> {
+                                    if (bar.succeeded()) {
+                                        final String branchName = bar.result().getString("name");
+                                        JsonObject result = new JsonObject()
+                                        .put("roleName", fRoleName)
+                                        .put("branch", branchName)
+                                        .put("token", token);
+                                       
+                                        aHandler.handle(Future.succeededFuture(result));
+                                    }
+                                    else{
+                                        aHandler.handle(Future.failedFuture(bar.cause()));
+                                    }
+                                    
+                                });
+                                
+                            }
+                            else{
+                                aHandler.handle(Future.failedFuture(tar.cause()));
+                            }
+                            
+                        });
+                    }
+                    else{
+                        aHandler.handle(Future.failedFuture(userAr.cause()));
+                    }
+                });
+
             }
             else{aHandler.handle(Future.failedFuture(Json.encodePrettily(ar.result())));}
         });
@@ -149,8 +199,10 @@ public class Case extends Base
     public void getWorkflow(String workflowID, Handler<AsyncResult<JsonObject>> aHandler) 
     {
         JsonObject query = new JsonObject().put("_id", new JsonObject().put("$oid",workflowID));
+        //System.err.println(query);
         mongo.findOne(CollectionHelper.WORKFLOWS.collection(), query, null, ar -> {
             if (ar.succeeded()) {
+                System.err.println(ar.result());
                 aHandler.handle(Future.succeededFuture(ar.result())); 
             }
             else{

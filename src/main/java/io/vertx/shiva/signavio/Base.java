@@ -1,8 +1,10 @@
 package io.vertx.shiva.signavio;
 
-
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
-
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 public class Base
 {
@@ -26,9 +28,10 @@ public class Base
         TASKS("tasks"),
         USERS("users"),
         GROUPS("groups"),
-        WORKFLOWS("WORKFLOWS"),
+        WORKFLOWS("workflows"),
         TRACKER("abmb_tracker"),
         USER_BRANCH("abmb_user_branch"),
+        BRANCH("abmb_branch"),
         INIT_TRACK("abmb_init_log"),
         ASSIGN_FAILED("abmb_set_assignee_failed"),
         ASSIGN_SUCCESS("abmb_set_assignee_success"),
@@ -61,6 +64,20 @@ public class Base
     
         public String logType() {
             return logType;
+        }
+    }
+
+    public static JsonObject getConfig()
+    {
+        return fromFile("src/main/conf/my-application-conf.json");
+    }
+    public static JsonObject fromFile(String file){
+
+        try {
+          //System.out.println(Paths.get(file));
+            return new JsonObject(new String(Files.readAllBytes(Paths.get(file))));
+        } catch (IOException e) {
+            throw new RuntimeException("Could not read file " + file, e);
         }
     }
 
