@@ -69,7 +69,7 @@ public class Base
 
     public static JsonObject getConfig()
     {
-        return fromFile("src/main/conf/my-application-conf.json");
+        return fromFile("conf/my-application-conf.json");
     }
     public static JsonObject fromFile(String file){
 
