@@ -60,48 +60,76 @@ public class Case extends Base
                          */
                         getAssigneeInfo(workflowId, caseId, roleVariableId, rar->{
                             String roleName = rar.result().getString("roleName");
-                            String groupName = rar.result().getString("branch") + "_" + roleName;
+                            String caseCreator = rar.result().getString("caseCreator");
                             String token = rar.result().getString("token");
-                            //System.err.println(groupName);
-                            UserHelper.getGroupInfo(mongo, groupName.toUpperCase(), gar->{
-                                if (gar.result() != null)
-                                {
-                                    JsonObject group =  gar.result();
-                                    String groupID = new JsonObject(group.getValue("_id").toString()).getString("$oid");
+                            String branchName =  rar.result().getString("branch");
+
+                            if (roleName.toLowerCase().equals("case_creator"))
+                            {
+                              
+                                UserHelper.getUserInfoByEmail(mongo, caseCreator, uar->{
+                                    JsonObject user =  uar.result();
+                                   
                                     String apiUrl = new SignavioApiPathHelper().getTasks() + "/" + taskId;
-                                    /**
+                                     /**
                                      * Start Update to Signavio
                                      */
-                                    JsonObject result = new JsonObject(WebClientHelper.putJson(apiUrl, token, new JsonObject().put("assigneeGroupId", groupID)));
+                                    JsonObject result = new JsonObject(WebClientHelper.putJson(apiUrl, token, new JsonObject().put("assigneeId",  new JsonObject(user.getValue("_id").toString()).getString("$oid"))));
                                     /**
                                      * End update To Signavio
                                      */
 
                                     //Log to DB for success case
-                                    mongo.insert(CollectionHelper.ASSIGN_SUCCESS.collection(), result, insertar -> {
-                                    
-                                    });
-                                }
-                                else
-                                {
-                                    //to handle Group Name not found! Log to DB
-                                    SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss+00:00");                          
-                                    String isoDate = df.format(new Date());
-                                    //System.err.println(isoDate);
-                                    JsonObject document = new JsonObject()
-                                    .put("caseId", new JsonObject(task.getValue("caseId").toString()).getString("$oid"))
-                                    .put("taskId",taskId)
-                                    .put("groupName",groupName)
-                                    .put("date", new JsonObject().put("$date", isoDate));
-                                    mongo.insert(CollectionHelper.ASSIGN_FAILED.collection(), document, insertar -> {
-                                        // if (insertar.succeeded()) {
-                                        //     aHandler.handle(Future.succeededFuture(insertar.result())); 
-                                        // } else {
-                                        //     aHandler.handle(Future.failedFuture(insertar.result())); 
-                                        // }
-                                    });
-                                }
-                            });
+                                    mongo.insert(CollectionHelper.ASSIGN_SUCCESS.collection(), result, mgoHandler->{});
+                                });
+                               
+                               
+
+                            }
+                            else{
+                                String groupName = branchName + "_" + roleName;
+                               
+                                //System.err.println(groupName);
+                                UserHelper.getGroupInfo(mongo, groupName.toUpperCase(), gar->{
+                                    if (gar.result() != null)
+                                    {
+                                        JsonObject group =  gar.result();
+                                        String groupID = new JsonObject(group.getValue("_id").toString()).getString("$oid");
+                                        String apiUrl = new SignavioApiPathHelper().getTasks() + "/" + taskId;
+                                        /**
+                                         * Start Update to Signavio
+                                         */
+                                        JsonObject result = new JsonObject(WebClientHelper.putJson(apiUrl, token, new JsonObject().put("assigneeGroupId", groupID)));
+                                        /**
+                                         * End update To Signavio
+                                         */
+
+                                        //Log to DB for success case
+                                        mongo.insert(CollectionHelper.ASSIGN_SUCCESS.collection(), result, insertar -> {
+                                        
+                                        });
+                                    }
+                                    else
+                                    {
+                                        //to handle Group Name not found! Log to DB
+                                        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss+00:00");                          
+                                        String isoDate = df.format(new Date());
+                                        //System.err.println(isoDate);
+                                        JsonObject document = new JsonObject()
+                                        .put("caseId", new JsonObject(task.getValue("caseId").toString()).getString("$oid"))
+                                        .put("taskId",taskId)
+                                        .put("groupName",groupName)
+                                        .put("date", new JsonObject().put("$date", isoDate));
+                                        mongo.insert(CollectionHelper.ASSIGN_FAILED.collection(), document, insertar -> {
+                                            // if (insertar.succeeded()) {
+                                            //     aHandler.handle(Future.succeededFuture(insertar.result())); 
+                                            // } else {
+                                            //     aHandler.handle(Future.failedFuture(insertar.result())); 
+                                            // }
+                                        });
+                                    }
+                                });
+                            }
                         });
                     }
                     aHandler.handle(Future.succeededFuture(new JsonObject().put("task", unassignedTask.size())));
@@ -119,7 +147,7 @@ public class Case extends Base
  
     public void getAssigneeInfo(String workflowID, String caseID, String roleID, Handler<AsyncResult<JsonObject>> aHandler)
     {
-        System.err.println(workflowID);
+        //System.err.println(workflowID);
         getWorkflow(workflowID, ar->{
             if (ar.succeeded())
             {
@@ -159,7 +187,7 @@ public class Case extends Base
                         mongo.findOne(CollectionHelper.TRACKER.collection(), query, null, tar -> {
                             if (tar.succeeded()) {
                                 String branchCode = tar.result().getString("branch");
-                                
+                                String caseCreator = tar.result().getString("email");
                                 //Find branch name in abmb_branch
                                 JsonObject bquery = new JsonObject().put("code", branchCode );
                                 mongo.findOne(CollectionHelper.BRANCH.collection(), bquery, null, bar -> {
@@ -168,8 +196,8 @@ public class Case extends Base
                                         JsonObject result = new JsonObject()
                                         .put("roleName", fRoleName)
                                         .put("branch", branchName)
-                                        .put("token", token);
-                                       
+                                        .put("token", token)
+                                        .put("caseCreator", caseCreator);
                                         aHandler.handle(Future.succeededFuture(result));
                                     }
                                     else{
@@ -202,7 +230,7 @@ public class Case extends Base
         //System.err.println(query);
         mongo.findOne(CollectionHelper.WORKFLOWS.collection(), query, null, ar -> {
             if (ar.succeeded()) {
-                System.err.println(ar.result());
+                //System.err.println(ar.result());
                 aHandler.handle(Future.succeededFuture(ar.result())); 
             }
             else{
@@ -216,25 +244,29 @@ public class Case extends Base
     {
         getCase(caseId, car->{
             if (car.succeeded()) {
-                if (car.result().containsKey("closed"))
-                {
-                    updateTracker(caseId, res->{});
-                    aHandler.handle(Future.succeededFuture(new ArrayList<JsonObject>())); 
-                }
+                if (car.result()!=null)
+                    if (car.result().containsKey("closed"))
+                    {
+                        updateTracker(caseId, res->{});
+                        aHandler.handle(Future.succeededFuture(new ArrayList<JsonObject>())); 
+                    }
+                    else{
+                        JsonObject query = new JsonObject()
+                        .put("caseId", new JsonObject().put("$oid", caseId))
+                        .put("assigneeGroupId", new JsonObject().put("$exists",false))
+                        .put("assigneeId", new JsonObject().put("$exists",false))
+                        .put("completed", new JsonObject().put("$exists",false));
+                        mongo.find("tasks", query, ar -> {
+                            if (ar.succeeded()) {
+                                aHandler.handle(Future.succeededFuture(ar.result())); 
+                            }
+                            else{
+                                aHandler.handle(Future.failedFuture("No task found with case id : " + caseId)); 
+                            }
+                        });
+                    }
                 else{
-                    JsonObject query = new JsonObject()
-                    .put("caseId", new JsonObject().put("$oid", caseId))
-                    .put("assigneeGroupId", new JsonObject().put("$exists",false))
-                    .put("assigneeId", new JsonObject().put("$exists",false))
-                    .put("completed", new JsonObject().put("$exists",false));
-                    mongo.find("tasks", query, ar -> {
-                        if (ar.succeeded()) {
-                            aHandler.handle(Future.succeededFuture(ar.result())); 
-                        }
-                        else{
-                            aHandler.handle(Future.failedFuture("No task found with case id : " + caseId)); 
-                        }
-                      });
+                    aHandler.handle(Future.failedFuture("No case found with case id : " + caseId)); 
                 }
             }
             else{

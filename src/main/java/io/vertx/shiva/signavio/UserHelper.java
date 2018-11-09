@@ -75,6 +75,45 @@ public class UserHelper{
       
     }
 
+     /**
+     * 
+     * @param mongo
+     * @param email
+     * @param aHandler
+     */
+    public static void getUserInfoByEmail(MongoClient mongo, String email, Handler<AsyncResult<JsonObject>> aHandler) {
+    
+      //.put("_id", new JsonObject().put("$oid","5b9a3ff14581670dace6e4f1"))//
+      mongo.findOne(Base.CollectionHelper.USERS.collection(), new JsonObject().put("emailAddressLower", email),null, ar->{
+          if (ar.succeeded()) {
+              if (ar.result() == null) {
+                aHandler.handle(Future.failedFuture("Connection succeeded but no result found!")); 
+              }
+              else {
+                aHandler.handle(Future.succeededFuture(ar.result()));
+                // JsonObject userObject = ar.result();
+                // getUserBranchByEmail(mongo, userObject.getString("emailAddressLower"), uar->{
+                //   if (uar.succeeded())
+                //   {
+                //     userObject.put("branch", uar.result());
+                //     aHandler.handle(Future.succeededFuture(userObject)); 
+                //   }
+                //   else
+                //   {
+                //     aHandler.handle(Future.failedFuture(Json.encodePrettily(uar.result()))); 
+                //   }
+                // });
+               
+              }
+          }
+          else
+          {
+            aHandler.handle(Future.failedFuture(ar.cause())); 
+          }
+        });
+    
+    }
+
     /**
      * 
      * @param mongo
@@ -90,24 +129,25 @@ public class UserHelper{
                 aHandler.handle(Future.failedFuture("Connection succeeded but no result found!")); 
               }
               else {
-                JsonObject userObject = ar.result();
-                getUserBranchByEmail(mongo, userObject.getString("emailAddressLower"), uar->{
-                  if (uar.succeeded())
-                  {
-                    userObject.put("branch", uar.result());
-                    aHandler.handle(Future.succeededFuture(userObject)); 
-                  }
-                  else
-                  {
-                    aHandler.handle(Future.failedFuture(Json.encodePrettily(uar.result()))); 
-                  }
-                });
+                aHandler.handle(Future.succeededFuture(ar.result()));
+                // JsonObject userObject = ar.result();
+                // getUserBranchByEmail(mongo, userObject.getString("emailAddressLower"), uar->{
+                //   if (uar.succeeded())
+                //   {
+                //     userObject.put("branch", uar.result());
+                //     aHandler.handle(Future.succeededFuture(userObject)); 
+                //   }
+                //   else
+                //   {
+                //     aHandler.handle(Future.failedFuture(Json.encodePrettily(uar.result()))); 
+                //   }
+                // });
                
               }
           }
           else
           {
-            aHandler.handle(Future.failedFuture(Json.encodePrettily(ar.result()))); 
+            aHandler.handle(Future.failedFuture(ar.cause())); 
           }
         });
     

@@ -222,7 +222,7 @@ public class ShivaVerticle extends AbstractVerticle {
         
         initObject.init(jsonObj, ar.result(), aHandler->{
           if (aHandler.succeeded()){
-            initObject.initWfTracker(aHandler.result(), id, jsonObj.getString("branchCode"), wfHandler->{
+            initObject.initWfTracker(aHandler.result(), jsonObj.getString("email"), jsonObj.getString("branchCode"), wfHandler->{
               routingContext.response()
               .setStatusCode(200)
               .putHeader("content-type", "application/json; charset=utf-8")

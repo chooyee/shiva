@@ -21,6 +21,17 @@ import java.text.SimpleDateFormat;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.Font;
+
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+
 public class InitCase extends Case
 {
     public InitCase(MongoClient mongo)
@@ -42,6 +53,9 @@ public class InitCase extends Case
         String idBackFileID = "";
         String idCusFileID = "";
         JsonObject fileJson;
+        String caseCreator = jsonObj.getString("email");
+        JsonArray custList = getCustomerDetails(jsonObj);
+        JsonObject product = getProductDetails(jsonObj);
         if (jsonObj.containsKey("efaces"));
         {
             String idfront = "";
@@ -62,12 +76,12 @@ public class InitCase extends Case
             fileJson = new JsonObject(WebClientHelper.uploadToSignavio(imageByte,"id_back.png", token));
             idBackFileID = fileJson.getString("id");
 
-            JsonArray custList = getCustomerDetails(jsonObj);
-            String filePath = genCSV(jsonObj.getJsonObject("application").getString("uuid"), custList);
+            
+            String filePath = genXls(jsonObj.getJsonObject("application").getString("uuid"), custList, product);
           
             try{
                 byte[] bFile = Files.readAllBytes(Paths.get(filePath));
-                fileJson = new JsonObject(WebClientHelper.uploadToSignavio(bFile,"cus details.csv", token));
+                fileJson = new JsonObject(WebClientHelper.uploadToSignavio(bFile,"cus details.xlsx", token));
                 idCusFileID = fileJson.getString("id");
             }
             catch(IOException io)
@@ -80,7 +94,7 @@ public class InitCase extends Case
             }
            
         }
-        caseWhisky(getAMLCode(jsonObj), idFrontFileID, idBackFileID, idCusFileID, ar->{
+        caseWhisky(getAMLCode(jsonObj), idFrontFileID, idBackFileID, idCusFileID, caseCreator, custList, ar->{
             if (ar.succeeded())
             {
                
@@ -131,9 +145,9 @@ public class InitCase extends Case
                     {
                         cust.put("idNo", eform.getString("idNo"));
                     }
-                    if (eform.containsKey("idNo"))
+                    if (eform.containsKey("idTypeCode"))
                     {
-                        cust.put("idNo", eform.getString("idNo"));
+                        cust.put("idTypeCode", eform.getString("idTypeCode"));
                     }
                     if (eform.containsKey("contactDetails"))
                     {
@@ -160,14 +174,339 @@ public class InitCase extends Case
 
     }
 
-    private String genCSV(String uuid, JsonArray custList)
+    private JsonObject getProductDetails(JsonObject jsonObj)
+    {
+        JsonObject product = new JsonObject();
+        
+        if (jsonObj.containsKey("product"));
+        {
+            product.put("code", jsonObj.getJsonObject("product").getString("code"));
+            product.put("name", jsonObj.getJsonObject("product").getString("name"));
+            product.put("segmentCode", jsonObj.getJsonObject("product").getString("segmentCode"));
+            
+            JsonArray facilities = new JsonArray();
+            jsonObj.getJsonObject("product").getJsonArray("facilities").forEach(e->{
+                JsonObject facility = (JsonObject)e;
+                facilities.add(new JsonObject().put("name", facility.getString("name")));
+
+            });
+            product.put("facilities", facilities);
+            // if (application.containsKey("facilityCodes"))
+            // {
+            //     cust.put("facilityCodes", application.getJsonArray("application"));
+            // }
+           
+            return product;
+        }
+
+    }
+
+    private String genXls(String uuid, JsonArray custList, JsonObject product)
+    {
+        String XLS_FILE = "c:/temp/"+uuid+".xlsx";
+        XSSFWorkbook workbook = new XSSFWorkbook();
+        XSSFSheet sheet = workbook.createSheet("Sheet 1");
+
+        Font headerFont = workbook.createFont();
+        headerFont.setBold(true);
+        headerFont.setFontHeightInPoints((short) 14);
+        
+        CellStyle headerCellStyle = workbook.createCellStyle();
+        headerCellStyle.setFont(headerFont);
+
+        for(int i =0; i<custList.size();i++)
+        {
+            JsonObject cust = custList.getJsonObject(i);
+            JsonObject identity = cust.getJsonObject("identityInfo");
+            int rowNum = 0;
+            Row row = sheet.createRow(rowNum++);
+            Cell cell = row.createCell(0);
+            cell.setCellValue((String) "Identity");
+            cell.setCellStyle(headerCellStyle);
+    
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue((String) "ID No");
+            cell = row.createCell(1);
+            cell.setCellValue((String) cust.getString("idNo") );
+
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue((String) "ID Type Code");
+            cell = row.createCell(1);
+            cell.setCellValue((String) cust.getString("idTypeCode") );
+
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue((String) "City (Permanent)");
+            cell = row.createCell(1);
+            cell.setCellValue((String) identity.getString("city") );
+
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue((String) "Post Code (Permanent)");
+            cell = row.createCell(1);
+            cell.setCellValue((String) identity.getString("postCode") );
+
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue((String) "State (Permanent)");
+            cell = row.createCell(1);
+            cell.setCellValue((String) identity.getString("stateCode") );
+
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue((String) "Country (Permanent)");
+            cell = row.createCell(1);
+            cell.setCellValue((String) identity.getString("country") );
+
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue((String) "D.O.B.");
+            cell = row.createCell(1);
+            cell.setCellValue((String) identity.getString("dob") );
+
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue((String) "Full Name");
+            cell = row.createCell(1);
+            cell.setCellValue((String) identity.getString("fullName") );
+
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue((String) "Gender");
+            cell = row.createCell(1);
+            cell.setCellValue((String) identity.getString("genderCode") );
+
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue((String) "Issuing Country");
+            cell = row.createCell(1);
+            cell.setCellValue((String) identity.getString("issuingCountry") );
+
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue((String) "Nationality");
+            cell = row.createCell(1);
+            cell.setCellValue((String) identity.getString("nationality") );
+          
+
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue((String) "Race");
+            cell = row.createCell(1);
+            cell.setCellValue((String) identity.getString("raceCode") );
+           
+
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue((String) "Religion");
+            cell = row.createCell(1);
+            cell.setCellValue((String) identity.getString("religionCode") );
+           
+
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue(" ");
+            cell.setCellStyle(headerCellStyle);
+
+
+            JsonObject contact = cust.getJsonObject("contactDetails");
+
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue((String) "Contact Details");
+            cell.setCellStyle(headerCellStyle);
+
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue((String) "Correspondence Address Same With MYKAD");
+            cell = row.createCell(1);
+            if (contact.getBoolean("contactAddressSameWithMYKAD"))
+            {
+                cell.setCellValue("Same as permanent address");
+            }
+            else{
+
+                /**
+                 * TODO: Show customer address
+                 */
+                cell.setCellValue(contact.getBoolean("contactAddressSameWithMYKAD"));
+            }
+            
+
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue((String) "City (Correspondence)");
+            cell = row.createCell(1);
+            cell.setCellValue((String) contact.getString("city") );
+
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue((String) "Post Code (Correspondence)");
+            cell = row.createCell(1);
+            cell.setCellValue((String) contact.getString("postCode") );
+
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue((String) "State (Correspondence)");
+            cell = row.createCell(1);
+            cell.setCellValue((String) contact.getString("stateCode") );
+
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue((String) "Country (Correspondence)");
+            cell = row.createCell(1);
+            cell.setCellValue((String) contact.getString("country") );
+
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue((String) "Email");
+            cell = row.createCell(1);
+            cell.setCellValue((String) contact.getString("email") );
+
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue((String) "Mobile No");
+            cell = row.createCell(1);
+            cell.setCellValue((String) contact.getString("mobileNo") );
+          
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue(" ");
+            cell.setCellStyle(headerCellStyle);
+
+            JsonObject occupation = cust.getJsonObject("occupationIncome");
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue((String) "Occupation");
+            cell.setCellStyle(headerCellStyle);
+
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue((String) "BNM Counter Party Code");
+            cell = row.createCell(1);
+            cell.setCellValue((String) occupation.getString("bnmCounterPartyCode") );
+
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue((String) "Employment Type Code");
+            cell = row.createCell(1);
+            cell.setCellValue((String) occupation.getString("employmentTypeCode") );
+
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue((String) "Gross Annual Income");
+            cell = row.createCell(1);
+            cell.setCellValue(occupation.getInteger("grossAnnualIncome"));
+
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue((String) "Industry Category");
+            cell = row.createCell(1);
+            cell.setCellValue((String) occupation.getString("industryCategory") );
+
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue((String) "Marital Status Code");
+            cell = row.createCell(1);
+            cell.setCellValue((String) occupation.getString("maritalStatusCode") );
+         
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue((String) "Occupation AML Code");
+            cell = row.createCell(1);
+            cell.setCellValue((String) occupation.getString("occupationAMLCode") );
+
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue((String) "Occupation CCRIS Code");
+            cell = row.createCell(1);
+            cell.setCellValue((String) occupation.getString("occupationCCRISCode") );
+
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue((String) "Occupation Category Code");
+            cell = row.createCell(1);
+            cell.setCellValue((String) occupation.getString("occupationCategoryCode") );
+          
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue((String) "Source Of Fund");
+            cell = row.createCell(1);
+            cell.setCellValue((String) occupation.getString("sourceOfFundCode") );
+
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue((String) "Source Of Wealth");
+            cell = row.createCell(1);
+            cell.setCellValue((String) occupation.getString("sourceOfWealthCode") );
+          
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue(" ");
+            cell.setCellStyle(headerCellStyle);
+
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue((String) "Product");
+            cell.setCellStyle(headerCellStyle);
+
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue((String) "Product Code");
+            cell = row.createCell(1);
+            cell.setCellValue((String) product.getString("code") );
+
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue((String) "Product Name");
+            cell = row.createCell(1);
+            cell.setCellValue((String) product.getString("name") );
+
+            row = sheet.createRow(rowNum++);
+            cell = row.createCell(0);
+            cell.setCellValue((String) "Prodcut Segment Code");
+            cell = row.createCell(1);
+            cell.setCellValue((String) product.getString("segmentCode") );
+
+            int j = 1;
+
+            for (int k = 0; k < product.getJsonArray("facilities").size(); k++)
+            {
+                int fnum = k + 1;
+                JsonObject facility = product.getJsonArray("facilities").getJsonObject(k);
+                row = sheet.createRow(rowNum++);
+                cell = row.createCell(0);
+                cell.setCellValue((String) "Facility " + fnum);
+                cell = row.createCell(1);
+                cell.setCellValue((String) facility.getString("name"));
+            }
+            for (int c = 0; c < 3; c++) {
+                sheet.autoSizeColumn(c);
+              }
+        }
+       
+        try {
+            FileOutputStream outputStream = new FileOutputStream(XLS_FILE);
+            workbook.write(outputStream);
+            workbook.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return XLS_FILE;
+    }
+
+    private String genCSV(String uuid, JsonArray custList, JsonObject product)
     {
         String CSV_FILE = "c:/temp/"+uuid+".csv";
         
         try (
             BufferedWriter writer = Files.newBufferedWriter(Paths.get(CSV_FILE));
 
-            CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.EXCEL.withDelimiter(';'));
+            CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.EXCEL.withDelimiter(','));
         ) 
         {
             custList.forEach(c->{
@@ -198,9 +537,9 @@ public class InitCase extends Case
                     csvPrinter.printRecord("Gross Annual Income", occupation.getInteger("grossAnnualIncome"));
                     csvPrinter.printRecord("Industry Category", occupation.getString("industryCategory"));
                     csvPrinter.printRecord("Marital Status Code", occupation.getString("maritalStatusCode"));
-                    csvPrinter.printRecord("AML Code", occupation.getString("occupationAMLCode"));
-                    csvPrinter.printRecord("CCRIS Code", occupation.getString("occupationCCRISCode"));
-                    csvPrinter.printRecord("Category COde", occupation.getString("occupationCategoryCode"));
+                    csvPrinter.printRecord("Occupation AML Code", occupation.getString("occupationAMLCode"));
+                    csvPrinter.printRecord("Occupation CCRIS Code", occupation.getString("occupationCCRISCode"));
+                    csvPrinter.printRecord("Occupation Category COde", occupation.getString("occupationCategoryCode"));
                     csvPrinter.printRecord("Source Of Fund", occupation.getString("sourceOfFundCode"));
                     csvPrinter.printRecord("Source Of Wealth", occupation.getString("sourceOfWealthCode"));
         
@@ -214,6 +553,25 @@ public class InitCase extends Case
                     csvPrinter.printRecord("Mobile No", contact.getString("mobileNo"));
                     csvPrinter.printRecord("Post Code", contact.getString("postCode"));
                     csvPrinter.printRecord("State Code", contact.getString("stateCode"));
+                    csvPrinter.println();
+
+                    csvPrinter.println();
+                    csvPrinter.printRecord("Product");
+                    csvPrinter.printRecord("Product Code", product.getString("code"));
+                    csvPrinter.printRecord("Product Name", product.getString("name"));
+                    csvPrinter.printRecord("Prodcut Segment Code", product.getString("segmentCode"));
+                  
+                    product.getJsonArray("facilities").forEach(e->{
+                        JsonObject facility = (JsonObject)e;
+                        try{
+                            csvPrinter.printRecord("Facility ", facility.getString("name"));
+                        }
+                        catch(Exception ex)
+                        {
+                            
+                        }
+                       
+                    });
                     csvPrinter.println();
                     csvPrinter.println();
                    
@@ -344,7 +702,7 @@ public class InitCase extends Case
     //     });
        
     // }
-    private void caseWhisky(List<JsonObject> amlObjects, String idfront, String idback, String customerDetails, Handler<AsyncResult<JsonObject>> aHandler)
+    private void caseWhisky(List<JsonObject> amlObjects, String idfront, String idback, String customerDetails, String caseCreator, JsonArray custDetails, Handler<AsyncResult<JsonObject>> aHandler)
     {
         mongo.findOne(CollectionHelper.WF_TRIGGER.collection(), new JsonObject().put("name", "newage").put("version", "1.0"), null, ar -> {
             if (ar.succeeded()) {
@@ -353,11 +711,20 @@ public class InitCase extends Case
                 JsonArray fields = t.getJsonObject("triggerInstance").getJsonObject("data").getJsonObject("formInstance").getJsonObject("value").getJsonArray("fields");
                 fields.forEach(f->{
                     JsonObject field = (JsonObject) f;
+                    // for(int j=0;j<amlObjects.size();j++){
+                        
+                    //     if (field.getString("name").toLowerCase().equals(amlObjects.get(j).getString("eddCode").toLowerCase()))
+                    //     {
+                    //         field.put("value", true);
+                        
+                    //     }
+
+                    // } 
                     for(int j=0;j<amlObjects.size();j++){
                         
-                        if (field.getString("name").toLowerCase().equals(amlObjects.get(j).getString("eddCode").toLowerCase()))
+                        if (field.getString("name").toLowerCase().equals("edd code"))
                         {
-                            field.put("value", true);
+                            field.put("value", amlObjects.get(j).getString("eddCode"));
                         
                         }
 
@@ -373,6 +740,30 @@ public class InitCase extends Case
                     else if (field.getString("name").toLowerCase().equals("customer details"))
                     {
                         field.put("value", customerDetails);
+                    }
+                    else if (field.getString("name").toLowerCase().equals("case creator"))
+                    {
+                        field.put("value", caseCreator);
+                    }
+                    else if (field.getString("name").toLowerCase().equals("customer name"))
+                    {
+                        custDetails.forEach(c->{
+                          
+                            JsonObject cus = (JsonObject)c;
+                            JsonObject identity = cus.getJsonObject("identityInfo");
+                            field.put("value",  identity.getString("fullName"));
+                          
+                        });
+                       
+                    }
+                    else if (field.getString("name").toLowerCase().equals("nric"))
+                    {
+                        custDetails.forEach(c->{
+                            JsonObject cus = (JsonObject)c;
+                            field.put("value", cus.getString("idNo"));
+                        });
+                       
+                       
                     }
                 });
                 //System.err.println(t);
