@@ -39,15 +39,33 @@ public class InitCase extends Case
         super(mongo);
     }
 
+    public void InitWorkflow(JsonObject jsonObj, String token)
+    {
+        List<JsonObject> amlObjs = getAMLCode(jsonObj);
+        JsonObject initWf = init(jsonObj, token);
+
+        for(int k=0;k<amlObjs.size();k++){
+                        
+            String eddCode = amlObjs.get(k).getString("eddCode");
+            prepareWorkflowJson(eddCode, initWf.getString("idFrontFileID"), initWf.getString("idBackFileID"), initWf.getString("idCusFileID"), initWf.getString("caseCreator"), initWf.getString("branchCode"), initWf.getJsonArray("custList"), ar->{
+                if (ar.succeeded())
+                {
+                   String postResult = WebClientHelper.postJson(new SignavioApiPathHelper().getCases(), token, ar.result()); 
+                   initWfTracker(postResult,jsonObj, wfHandler->{});
+                }
+            });
+        }
+    }
     /**
      * Inititalize new workflow
      * @param jsonObj
      * @param token
      * @param aHandler
      */
-    public void init(JsonObject jsonObj, String token, Handler<AsyncResult<String>> aHandler) 
+    public JsonObject init(JsonObject jsonObj, String token) 
     {
         final String id = jsonObj.getString("id");
+        final String branchCode = jsonObj.getString("branchCode");
         //final String newCaseName = jsonObj.getString("newCaseName");
         String idFrontFileID = "";
         String idBackFileID = "";
@@ -56,28 +74,38 @@ public class InitCase extends Case
         String caseCreator = jsonObj.getString("email");
         JsonArray custList = getCustomerDetails(jsonObj);
         JsonObject product = getProductDetails(jsonObj);
+        JsonArray qna = getQNA(jsonObj);
+
         if (jsonObj.containsKey("efaces"));
         {
             String idfront = "";
             String idback = "";
+            byte[] imageByte;
             JsonArray eface = jsonObj.getJsonArray("efaces");
             
             for (int i = 0 ; i < eface.size(); i++) {
                 JsonObject obj = eface.getJsonObject(i);
                
-                idfront = obj.getString("idfront");
-                idback = obj.getString("idback");
+                if (obj.containsKey("idfront"))
+                    idfront = obj.getString("idfront");
+                if (obj.containsKey("idback"))
+                    idback = obj.getString("idback");
             }
-            byte[] imageByte = Base64.getDecoder().decode(idfront);
-            fileJson = new JsonObject(WebClientHelper.uploadToSignavio(imageByte,"id_front.png", token));
-            idFrontFileID = fileJson.getString("id");
-
-            imageByte = Base64.getDecoder().decode(idback);
-            fileJson = new JsonObject(WebClientHelper.uploadToSignavio(imageByte,"id_back.png", token));
-            idBackFileID = fileJson.getString("id");
-
             
-            String filePath = genXls(jsonObj.getJsonObject("application").getString("uuid"), custList, product);
+            if (idfront.length()>0)
+            {
+                imageByte = Base64.getDecoder().decode(idfront);
+                fileJson = new JsonObject(WebClientHelper.uploadToSignavio(imageByte,"id_front.png", token));
+                idFrontFileID = fileJson.getString("id");
+            }
+            if (idback.length()>0)
+            {
+                imageByte = Base64.getDecoder().decode(idback);
+                fileJson = new JsonObject(WebClientHelper.uploadToSignavio(imageByte,"id_back.png", token));
+                idBackFileID = fileJson.getString("id");
+            }
+            
+            String filePath = genXls(jsonObj.getJsonObject("application").getString("uuid"), custList, product, qna);
           
             try{
                 byte[] bFile = Files.readAllBytes(Paths.get(filePath));
@@ -94,30 +122,29 @@ public class InitCase extends Case
             }
            
         }
-        caseWhisky(getAMLCode(jsonObj), idFrontFileID, idBackFileID, idCusFileID, caseCreator, custList, ar->{
-            if (ar.succeeded())
-            {
-               
-                aHandler.handle(Future.succeededFuture(WebClientHelper.postJson(new SignavioApiPathHelper().getCases(), token, ar.result()))); 
-            }
-            else{
-                aHandler.handle(Future.failedFuture(ar.cause()));
-            }
-        });
-        // caseWhisky(getAMLCode(jsonObj), idFrontFileID, idBackFileID, idCusFileID, ar->{
+
+        JsonObject result = new JsonObject();
+        result.put("idFrontFileID", idFrontFileID);
+        result.put("idBackFileID", idBackFileID);
+        result.put("idCusFileID", idCusFileID);
+        result.put("caseCreator", caseCreator);
+        result.put("branchCode", branchCode);
+        result.put("custList", custList);
+        
+        return result;
+        // prepareWorkflowJson(getAMLCode(jsonObj), idFrontFileID, idBackFileID, idCusFileID, caseCreator,branchCode, custList, ar->{
         //     if (ar.succeeded())
         //     {
-        //         Whisky whisky = ar.result();
-        //         System.err.println(Json.encodePrettily(whisky));
-        //         aHandler.handle(Future.succeededFuture(WebClientHelper.postJson(new SignavioApiPathHelper().getCases(), token, whisky))); 
+        //         aHandler.handle(Future.succeededFuture(WebClientHelper.postJson(new SignavioApiPathHelper().getCases(), token, ar.result()))); 
         //     }
         //     else{
         //         aHandler.handle(Future.failedFuture(ar.cause()));
         //     }
-        // });      
-        
+        // });
+       
        
     }//end InitCase
+
     private List<JsonObject> getAMLCode(JsonObject jsonObj)
     {
         List<JsonObject> aml = new ArrayList<JsonObject>();
@@ -201,7 +228,30 @@ public class InitCase extends Case
 
     }
 
-    private String genXls(String uuid, JsonArray custList, JsonObject product)
+    private JsonArray getQNA(JsonObject jsonObj)
+    {
+        JsonArray qna = new JsonArray();
+        
+        if (jsonObj.containsKey("eddCases"));
+        {
+            jsonObj.getJsonArray("eddCases").forEach(e->{
+                JsonObject eddCase = (JsonObject)e;
+                if (eddCase.containsKey("eddAnswers")){
+                    eddCase.getJsonArray("eddAnswers").forEach(ea->{
+                        JsonObject eddAnswer = (JsonObject)ea;
+                        eddAnswer.getJsonArray("answers").forEach(ans->{
+                            qna.add((JsonObject) ans);
+                        });
+                    });
+                }
+            });
+          
+        }
+        return qna;
+
+    }
+
+    private String genXls(String uuid, JsonArray custList, JsonObject product, JsonArray qna)
     {
         String XLS_FILE = "c:/temp/"+uuid+".xlsx";
         XSSFWorkbook workbook = new XSSFWorkbook();
@@ -482,9 +532,49 @@ public class InitCase extends Case
                 cell = row.createCell(1);
                 cell.setCellValue((String) facility.getString("name"));
             }
+
+            if (qna.size()>0)
+            {
+                row = sheet.createRow(rowNum++);
+                cell = row.createCell(0);
+                cell.setCellValue(" ");
+                cell.setCellStyle(headerCellStyle);
+    
+                row = sheet.createRow(rowNum++);
+                cell = row.createCell(0);
+                cell.setCellValue((String) "EDD Questions and Answers");
+                cell.setCellStyle(headerCellStyle);
+            }
+
+            for(int l =0; l < qna.size(); l++)
+            {
+                int qnum = l + 1;
+                JsonObject qnaObj = qna.getJsonObject(l);
+                row = sheet.createRow(rowNum++);
+                cell = row.createCell(0);
+                cell.setCellValue((String) "Question ID " + qnum);
+                cell = row.createCell(1);
+                cell.setCellValue((String) qnaObj.getString("questionId"));
+
+                row = sheet.createRow(rowNum++);
+                cell = row.createCell(0);
+                cell.setCellValue((String) "Answer ");
+                cell = row.createCell(1);
+                Object aObj = qnaObj.getValue("value");
+                if(aObj instanceof Boolean){
+                    Boolean bval = (Boolean)aObj;
+                    cell.setCellValue((Boolean) bval);
+                }
+                else
+                {
+                    cell.setCellValue((String) aObj);
+                }
+                
+            }
+
             for (int c = 0; c < 3; c++) {
                 sheet.autoSizeColumn(c);
-              }
+            }
         }
        
         try {
@@ -602,140 +692,35 @@ public class InitCase extends Case
      
     }
 
-    public void auditLog(JsonObject incomingObject, Handler<AsyncResult<String>> aHandler)
+    private void prepareWorkflowJson(String eddCode, String idfront, String idback, String customerDetails, String caseCreator,String branchCode, JsonArray custDetails, Handler<AsyncResult<JsonObject>> aHandler)
     {
-        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss+00:00");                          
-        String isoDate = df.format(new Date());
-        incomingObject.put("date", new JsonObject().put("$date", isoDate));
-        
-        mongo.insert(CollectionHelper.INIT_TRACK.collection(), incomingObject, insertar -> {
-            if (insertar.succeeded()) {
-                aHandler.handle(Future.succeededFuture(insertar.result())); 
-            } else {
-                aHandler.handle(Future.failedFuture(insertar.cause())); 
-            }
-        });
-    }
-
-    public void initWfTracker(String resultStr, String userid, String branchCode, Handler<AsyncResult<String>> aHandler) 
-    {
-        System.err.println(userid);
-
-        JsonObject caseObj = new JsonObject(resultStr);
-        
-        mongo.findOne(CollectionHelper.USER_BRANCH.collection(), new JsonObject().put("email", userid), null, ar -> {
-            if (ar.succeeded()) {
-                System.err.println(ar.result());
-                JsonObject document = new JsonObject()
-                .put("caseid", caseObj.getString("id"))
-                .put("email", userid)
-                .put("branch", branchCode)
-                .put("complete", false);
-                
-                mongo.insert(CollectionHelper.TRACKER.collection(), document, insertar -> {
-                    if (ar.succeeded()) {
-                        aHandler.handle(Future.succeededFuture(insertar.result())); 
-                    } else {
-                        aHandler.handle(Future.failedFuture(document.encodePrettily())); 
-                    }
-                });
-                //MongoDBHelper.insert(mongo, "abmb_tracker", document, aHandler);
-            }
-            
-          });
-        
-    }//end InitCase
-
-    // private void caseWhisky(List<JsonObject> amlObjects, String idfront, String idback, String customerDetails, Handler<AsyncResult<Whisky>> aHandler)
-    // {
-    //     mongo.findOne(CollectionHelper.WF_TRIGGER.collection(), new JsonObject().put("name", "newage").put("version", "1.0"), null, ar -> {
-    //         if (ar.succeeded()) {
-    //             Gson gson = new GsonBuilder().create();
-    //             Whisky whisky = gson.fromJson(Json.encode(ar.result()), Whisky.class);
-    //             List<Field> fields = whisky.triggerInstance.data.formInstance.value.getFields();
-    //             List<Field> jfk = new ArrayList<Field>();
-    //             for (int i = 0; i < fields.size(); i++) {
-    //                 boolean add = true;
-    //                 Field f = fields.get(i);
-    //                 // System.out.println(gson.toJson(f));
-    //                 // System.out.println(f.getName().equals("Name"));
-    //                 // System.out.println(f.getName());
-    //                 for(int j=0;j<amlObjects.size();j++){
-    //                     System.err.println(f.getName().toLowerCase() + ":" + amlObjects.get(j).getString("eddCode").toLowerCase());
-    //                     if (f.getName().toLowerCase().equals(amlObjects.get(j).getString("eddCode").toLowerCase()))
-    //                     {
-    //                         //f.setValue("true");
-    //                         System.err.println("in");
-    //                         //fields.remove(f);
-    //                         add = false;
-                           
-    //                     }
-
-    //                 } 
-                   
-    //                 if (f.getName().toLowerCase().equals("id front"))
-    //                 {
-    //                     f.setValue(idfront);
-                      
-    //                 }
-    //                 else if (f.getName().toLowerCase().equals("id back"))
-    //                 {
-    //                     f.setValue(idfront);
-                       
-    //                 }
-    //                 else if (f.getName().toLowerCase().equals("customer details"))
-    //                 {
-    //                     f.setValue(idfront);
+        // String eddCode = "";
+        // for(int k=0;k<amlObjects.size();k++){
                         
-    //                 }
-    //                 fields.set(i, f);
-    //                 if (add)
-    //                     jfk.add(f);
-    //             }//end for
-    //             whisky.triggerInstance.data.formInstance.value.setFields(jfk);
-    //             aHandler.handle(Future.succeededFuture(whisky));
-    //         }
-    //         else{
-    //             aHandler.handle(Future.failedFuture(ar.cause()));
-    //         }
-            
-    //     });
-       
-    // }
-    private void caseWhisky(List<JsonObject> amlObjects, String idfront, String idback, String customerDetails, String caseCreator, JsonArray custDetails, Handler<AsyncResult<JsonObject>> aHandler)
-    {
-        mongo.findOne(CollectionHelper.WF_TRIGGER.collection(), new JsonObject().put("name", "newage").put("version", "1.0"), null, ar -> {
+        //     eddCode = amlObjects.get(k).getString("eddCode");
+
+        mongo.findOne(CollectionHelper.WF_TRIGGER.collection(), new JsonObject().put("name", eddCode).put("version", "1.0"), null, ar -> {
             if (ar.succeeded()) {
                 JsonObject t = new JsonObject().put("triggerInstance", ar.result().getJsonObject("triggerInstance"));
 
                 JsonArray fields = t.getJsonObject("triggerInstance").getJsonObject("data").getJsonObject("formInstance").getJsonObject("value").getJsonArray("fields");
                 fields.forEach(f->{
                     JsonObject field = (JsonObject) f;
-                    // for(int j=0;j<amlObjects.size();j++){
-                        
-                    //     if (field.getString("name").toLowerCase().equals(amlObjects.get(j).getString("eddCode").toLowerCase()))
-                    //     {
-                    //         field.put("value", true);
-                        
-                    //     }
 
-                    // } 
-                    for(int j=0;j<amlObjects.size();j++){
-                        
-                        if (field.getString("name").toLowerCase().equals("edd code"))
-                        {
-                            field.put("value", amlObjects.get(j).getString("eddCode"));
-                        
-                        }
-
-                    } 
+                    if (field.getString("name").toLowerCase().equals("edd code"))
+                    {
+                        field.put("value", eddCode);
+                    
+                    }
                     if (field.getString("name").toLowerCase().equals("id front"))
                     {
-                        field.put("value", idfront);
+                        if (idfront.length()>0)
+                            field.put("value", idfront);
                     }
                     else if (field.getString("name").toLowerCase().equals("id back"))
                     {
-                        field.put("value", idback);
+                        if (idback.length()>0)
+                            field.put("value", idback);
                     }
                     else if (field.getString("name").toLowerCase().equals("customer details"))
                     {
@@ -745,16 +730,20 @@ public class InitCase extends Case
                     {
                         field.put("value", caseCreator);
                     }
+                    else if (field.getString("name").toLowerCase().equals("branch code"))
+                    {
+                        field.put("value", branchCode);
+                    }
                     else if (field.getString("name").toLowerCase().equals("customer name"))
                     {
                         custDetails.forEach(c->{
-                          
+                            
                             JsonObject cus = (JsonObject)c;
                             JsonObject identity = cus.getJsonObject("identityInfo");
                             field.put("value",  identity.getString("fullName"));
-                          
+                            
                         });
-                       
+                        
                     }
                     else if (field.getString("name").toLowerCase().equals("nric"))
                     {
@@ -762,8 +751,8 @@ public class InitCase extends Case
                             JsonObject cus = (JsonObject)c;
                             field.put("value", cus.getString("idNo"));
                         });
-                       
-                       
+                        
+                        
                     }
                 });
                 //System.err.println(t);
@@ -774,36 +763,7 @@ public class InitCase extends Case
             }
             
         });
-       
+  
     }
-    // private static Whisky caseWhisky(String newCaseName, String idfront)
-    // {
-    //     try(Reader reader = new InputStreamReader(io.vertx.shiva.MainVerticle.class.getClassLoader().getResourceAsStream("test.json"), "UTF-8")){
-    //         Gson gson = new GsonBuilder().create();
-    //         Whisky whisky = gson.fromJson(reader, Whisky.class);
-    //         List<Field> fields = whisky.triggerInstance.data.formInstance.value.getFields();
-    //         for (int i = 0; i < fields.size(); i++) {
-    //             Field f = fields.get(i);
-    //             // System.out.println(gson.toJson(f));
-    //             // System.out.println(f.getName().equals("Name"));
-    //             // System.out.println(f.getName());
-    //             if (f.getName().equals("name"))
-    //             {
-    //                 f.setValue(newCaseName);
-    //                 fields.set(i, f);
-    //             }
-    //             if (f.getName().equals("idfront"))
-    //             {
-    //                 f.setValue(idfront);
-    //                 fields.set(i, f);
-    //             }
-    //         }//end for
-    //         whisky.triggerInstance.data.formInstance.value.setFields(fields);
-    //         return whisky;
-        
-    //     }//end try
-    //     catch (IOException e) {
-    //         return null;
-    //     }//end catch
-    // }
+ 
 }

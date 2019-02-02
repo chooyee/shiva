@@ -30,6 +30,7 @@ public class Base
         GROUPS("groups"),
         WORKFLOWS("workflows"),
         TRACKER("abmb_tracker"),
+        INDI_TRACKER("abmb_indi_tracker"),
         USER_BRANCH("abmb_user_branch"),
         BRANCH("abmb_branch"),
         INIT_TRACK("abmb_init_log"),

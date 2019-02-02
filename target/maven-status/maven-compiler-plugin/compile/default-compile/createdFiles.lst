@@ -15,6 +15,7 @@ io\vertx\shiva\MongoSyncVerticle.class
 io\vertx\shiva\liquor\Data.class
 io\vertx\shiva\ShivaVerticle.class
 io\vertx\shiva\signavio\UserHelper.class
+io\vertx\shiva\signavio\InitCaseNonIndi.class
 io\vertx\shiva\liquor\Value.class
 io\vertx\shiva\util\WebClientPost.class
 io\vertx\shiva\liquor\Whisky.class

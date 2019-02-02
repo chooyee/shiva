@@ -1,0 +1,117 @@
+  "triggerInstance": {
+    "sourceWorkflowId": "5c0e1087c2354c0c5489d90f",
+    "data": {
+      "formInstance": {
+        "value": {
+          "fields": [
+            {
+              "elementType": "fieldInstance",
+              "id": "5c0e1087c2354c0c5489d966",
+              "name": "ID Front",
+              "type": {
+                "name": "fileId"
+              },
+              "visible": true,
+              "readOnly": false,
+              "required": false
+            },
+            {
+              "elementType": "fieldInstance",
+              "id": "5c0e1087c2354c0c5489d967",
+              "name": "ID Back",
+              "type": {
+                "name": "fileId"
+              },
+              "visible": true,
+              "readOnly": false,
+              "required": false
+            },
+            {
+              "elementType": "fieldInstance",
+              "id": "5c0e1087c2354c0c5489d968",
+              "name": "Customer Details",
+              "type": {
+                "name": "fileId"
+              },
+              "visible": true,
+              "readOnly": false,
+              "required": false
+            },
+            {
+              "elementType": "fieldInstance",
+              "id": "5c0e1087c2354c0c5489d969",
+              "name": "Case Creator",
+              "type": {
+                "name": "emailAddress"
+              },
+              "visible": true,
+              "readOnly": false,
+              "required": false
+            },
+            {
+              "elementType": "fieldInstance",
+              "id": "5c0e1087c2354c0c5489d96a",
+              "name": "Branch Code",
+              "type": {
+                "name": "text"
+              },
+              "visible": true,
+              "readOnly": false,
+              "required": false,
+              "value": "029"
+            },
+            {
+              "elementType": "fieldInstance",
+              "id": "5c0e1087c2354c0c5489d96b",
+              "name": "EDD Code",
+              "type": {
+                "name": "text",
+                "multiLine": true
+              },
+              "visible": true,
+              "readOnly": false,
+              "required": false,
+              "value": "CD"
+            },
+            {
+              "elementType": "fieldInstance",
+              "id": "5c0e1087c2354c0c5489d96c",
+              "name": "Customer Name",
+              "type": {
+                "name": "text"
+              },
+              "visible": true,
+              "readOnly": false,
+              "required": false
+            },
+            {
+              "elementType": "fieldInstance",
+              "id": "5c0e1087c2354c0c5489d96d",
+              "name": "NRIC",
+              "type": {
+                "name": "text"
+              },
+              "visible": true,
+              "readOnly": false,
+              "required": false
+            },
+            {
+              "elementType": "fieldInstance",
+              "id": "5c0e1087c2354c0c5489d96e",
+              "name": "Comment",
+              "type": {
+                "name": "list",
+                "elementType": {
+                  "name": "text",
+                  "multiLine": true
+                }
+              },
+              "visible": true,
+              "readOnly": false,
+              "required": false
+            }
+          ]
+        }
+      }
+    }
+  }

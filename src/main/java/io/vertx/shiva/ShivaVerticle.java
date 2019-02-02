@@ -97,8 +97,12 @@ public class ShivaVerticle extends AbstractVerticle {
     router.get("/api/v1/users/token/:id").handler(this::getUserTokenByID);   
     router.route("/api/v1/case/new").handler(BodyHandler.create());
     router.post("/api/v1/case/new").handler(this::initCase);
+    router.route("/api/v1/nonindi/new").handler(BodyHandler.create());
+    router.post("/api/v1/nonindi/new").handler(this::InitCaseNonIndi);
     router.get("/api/v1/task/unassigned/:caseid").handler(this::getUnAssignedTask); 
     router.get("/api/v1/task/assign/:caseid").handler(this::setAssignee);  
+
+    router.get("/api/v1/test/mongo").handler(this::mongoTest);
 
     // Create the HTTP server and pass the "accept" method to the request handler.
     vertx
@@ -107,7 +111,7 @@ public class ShivaVerticle extends AbstractVerticle {
         .listen(
             // Retrieve the port from the configuration,
             // default to 8080.
-            config().getInteger("https.port", 4443),
+            config().getInteger("https.port", 8443),
             next
         );
   }
@@ -166,7 +170,18 @@ public class ShivaVerticle extends AbstractVerticle {
     mongo.close();
   }
 
-  
+  private void mongoTest(RoutingContext routingContext) {
+    JsonObject filter = new JsonObject().put("name", "CP").put("version", "1.0");
+
+    mongo.findOne("abmb_workflow_trigger",filter , null, ar -> {
+      routingContext.response()
+        .setStatusCode(200)
+        .putHeader("content-type", "application/json; charset=utf-8")
+        .end(Json.encodePrettily(ar.result()));
+    });     
+    
+    
+  }
   private void getUserTokenByID(RoutingContext routingContext) {
     final String id = routingContext.request().getParam("id");
     
@@ -211,6 +226,54 @@ public class ShivaVerticle extends AbstractVerticle {
     InitCase initObject = new InitCase(mongo);
      //Insert to abmb_init_log
     initObject.auditLog(jsonObj, ah->{});
+   
+    //Get User token from database 
+    UserHelper.getUserTokenByID(mongo,id, ar->{
+      if (ar.succeeded()) {
+        if (ar.result() == null) {
+          routingContext.response().setStatusCode(404).end();
+          return;
+        }
+        
+        initObject.InitWorkflow(jsonObj, ar.result());
+
+        initObject.initIndiWfMain(jsonObj,  aHandler->{
+          if (aHandler.succeeded()){    
+              routingContext.response()
+              .setStatusCode(200)
+              .putHeader("content-type", "application/json; charset=utf-8")
+              .end(aHandler.result());
+          }
+          else{
+             routingContext.response()
+              .setStatusCode(200)
+              .putHeader("content-type", "application/json; charset=utf-8")
+              .end(Json.encodePrettily(aHandler.cause()));
+          }
+        });
+       
+      } else {
+        routingContext.response().setStatusCode(200).end("Failed to get user token");
+      }
+    });
+  }
+
+  /**
+  * This is call by DBOS to initiate a new EDD workflow
+  */
+  private void InitCaseNonIndi(RoutingContext routingContext)
+  {
+  
+    JsonObject jsonObj = routingContext.getBodyAsJson();
+    //final String id = jsonObj.getString("id");
+    // final String id =  "leechooyee@alliancefg.com";
+    final String id =  config().getString("signavio.admin");
+    // final String newCaseName = jsonObj.getString("newCaseName");
+
+    
+    InitCaseNonIndi initObject = new InitCaseNonIndi(mongo);
+     //Insert to abmb_init_log
+    initObject.auditLog(jsonObj, ah->{});
 
     //Get User token from database 
     UserHelper.getUserTokenByID(mongo,id, ar->{
@@ -222,7 +285,7 @@ public class ShivaVerticle extends AbstractVerticle {
         
         initObject.init(jsonObj, ar.result(), aHandler->{
           if (aHandler.succeeded()){
-            initObject.initWfTracker(aHandler.result(), jsonObj.getString("email"), jsonObj.getString("branchCode"), wfHandler->{
+            initObject.initNonIndiWfTracker(aHandler.result(), jsonObj.getInteger("id").toString(), wfHandler->{
               routingContext.response()
               .setStatusCode(200)
               .putHeader("content-type", "application/json; charset=utf-8")
@@ -242,7 +305,6 @@ public class ShivaVerticle extends AbstractVerticle {
       }
     });
   }
-
   /**
    * Set task assignee
    * @param routingContext
