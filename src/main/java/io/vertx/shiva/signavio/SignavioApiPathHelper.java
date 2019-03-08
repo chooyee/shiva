@@ -15,6 +15,7 @@ public class SignavioApiPathHelper {
     private String files = "files";
     private String cases = "cases";
     private String tasks = "tasks";
+    private String workflows = "workflows";
     private JsonObject jsonObject;
 
     public SignavioApiPathHelper() {
@@ -58,6 +59,12 @@ public class SignavioApiPathHelper {
     public String getApiVer()
     {
         return this.jsonObject.get("sig_apiver").getAsString();
+    }
+
+    //http://localhost:8080/api/v1/alliancebankofmalaysia/workflows/5c12193fc2354c0c289bd184/startInfo
+    public String getWorkflowStartInfo(String sourceWorkflowId)
+    {
+        return apiPath + workflows + "/" + sourceWorkflowId + "/startInfo";
     }
 
     

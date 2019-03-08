@@ -304,63 +304,15 @@ public class Case extends Base
         });
     }
 
-    // public void updateWfTracker(String resultStr, JsonObject jsonObj, Handler<AsyncResult<String>> aHandler)
-    // {
-    //     String email = jsonObj.getString("email");
-    //     String branchCode = jsonObj.getString("branchCode");
-    //     String userId = jsonObj.getJsonArray("eform").getJsonObject(0).getString("idNo");
-    //     String caseId = new JsonObject(resultStr).getString("id");
-
-    //     JsonObject filter = new JsonObject();
-    //     filter.put("userId", userId);
-    //     filter.put("branchCode", branchCode);
-    //     filter.put("userId", userId);
-
-    //     List<JsonObject> eddObjs = getEddObjects(jsonObj);
-
-    //     Json
-    // }
-
-    // public void initWfTracker(String resultStr, JsonObject jsonObj, String userid, String branchCode, Handler<AsyncResult<String>> aHandler) 
-    // {
-    //     System.err.println(userid);
-    //     List<JsonObject> eddObjs = getEddObjects(jsonObj);
-    //     JsonObject caseObj = new JsonObject(resultStr);
-        
-    //     mongo.findOne(CollectionHelper.USER_BRANCH.collection(), new JsonObject().put("email", userid), null, ar -> {
-    //         if (ar.succeeded()) {
-    //             System.err.println(ar.result());
-    //             JsonObject document = new JsonObject()
-    //             .put("caseid", caseObj.getString("id"))
-    //             .put("email", userid)
-    //             .put("branch", branchCode)
-    //             .put("type", "indi")
-    //             .put("edd", eddObjs)
-    //             .put("complete", false);
-                
-    //             mongo.insert(CollectionHelper.TRACKER.collection(), document, insertar -> {
-    //                 if (ar.succeeded()) {
-    //                     aHandler.handle(Future.succeededFuture(insertar.result())); 
-    //                 } else {
-    //                     aHandler.handle(Future.failedFuture(document.encodePrettily())); 
-    //                 }
-    //             });
-    //             //MongoDBHelper.insert(mongo, "abmb_tracker", document, aHandler);
-    //         }
-            
-    //       });
-        
-    // }//end InitCase
-
- 
-    public void initWfTracker(String resultStr, JsonObject jsonObj, Handler<AsyncResult<String>> aHandler) 
+    
+    public void initWfTracker(String caseId, JsonObject jsonObj, Handler<AsyncResult<String>> aHandler) 
     {
         String email = jsonObj.getString("email");
         String branchCode = jsonObj.getString("branchCode");
         String userId = jsonObj.getJsonObject("application").getJsonArray("eform").getJsonObject(0).getString("idNo");
-        String caseId = new JsonObject(resultStr).getString("id");
+        //String caseId = new JsonObject(resultStr).getString("id");
 
-        System.err.println(userId);
+        //System.err.println(userId);
      
         mongo.findOne(CollectionHelper.USER_BRANCH.collection(), new JsonObject().put("email", email), null, ar -> {
             if (ar.succeeded()) {
@@ -386,38 +338,38 @@ public class Case extends Base
         
     }//end initWfTracker
 
-    /// <summary>
-    /// Init Indi Wf Tracker
-    /// </summary>
-    /// <returns>Void </returns>
-    public void initIndiWfMain(JsonObject jsonObj, Handler<AsyncResult<String>> aHandler) 
-    {
-        String email = jsonObj.getString("email");
-        String branchCode = jsonObj.getString("branchCode");
-        String userId = jsonObj.getJsonObject("application").getJsonArray("eform").getJsonObject(0).getString("idNo");
-        System.err.println(userId);
+    // /// <summary>
+    // /// Init Indi Wf Tracker
+    // /// </summary>
+    // /// <returns>Void </returns>
+    // public void initIndiWfMain(JsonObject jsonObj, Handler<AsyncResult<String>> aHandler) 
+    // {
+    //     String email = jsonObj.getString("email");
+    //     String branchCode = jsonObj.getString("branchCode");
+    //     String userId = jsonObj.getJsonObject("application").getJsonArray("eform").getJsonObject(0).getString("idNo");
+    //     System.err.println(userId);
         
-        List<JsonObject> eddObjs = getEddObjects(jsonObj);
+    //     List<JsonObject> eddObjs = getEddObjects(jsonObj);
 
-        JsonObject document = new JsonObject()
-        .put("userId", userId)
-        .put("email", email)
-        .put("branch", branchCode)
-        .put("type", "indi")
-        .put("edd", eddObjs)
-        .put("complete", false);
+    //     JsonObject document = new JsonObject()
+    //     .put("userId", userId)
+    //     .put("email", email)
+    //     .put("branch", branchCode)
+    //     .put("type", "indi")
+    //     .put("edd", eddObjs)
+    //     .put("complete", false);
         
-        mongo.insert(CollectionHelper.INDI_TRACKER.collection(), document, insertar -> {
-            if (insertar.succeeded()) {
+    //     mongo.insert(CollectionHelper.INDI_TRACKER.collection(), document, insertar -> {
+    //         if (insertar.succeeded()) {
                 
-                System.err.println(insertar.result()); 
-                aHandler.handle(Future.succeededFuture(insertar.result())); 
-            } else {
-                aHandler.handle(Future.failedFuture(document.encodePrettily())); 
-            }
-        });
+    //             System.err.println(insertar.result()); 
+    //             aHandler.handle(Future.succeededFuture(insertar.result())); 
+    //         } else {
+    //             aHandler.handle(Future.failedFuture(document.encodePrettily())); 
+    //         }
+    //     });
         
-    }//end initWfTracker
+    // }//end initWfTracker
 
     private List<JsonObject> getEddObjects(JsonObject jsonObj)
     {

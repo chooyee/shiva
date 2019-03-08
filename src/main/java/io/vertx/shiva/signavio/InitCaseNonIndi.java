@@ -7,7 +7,8 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
 import java.util.Base64;
-
+import java.util.regex.Matcher; 
+import java.util.regex.Pattern; 
 
 public class InitCaseNonIndi extends Case
 {
@@ -34,14 +35,16 @@ public class InitCaseNonIndi extends Case
         final String creatorEmail = jsonObj.getString("creatorEmail");
         final String creatorLanId = jsonObj.getString("creatorLanId");
         final String requestForApprovalName = jsonObj.getString("requestForApprovalName");
-        final String requestForApprovalEmail = jsonObj.containsKey("requestForApprovalEmail")?jsonObj.getString("requestForApprovalEmail"):"";
+        String requestForApprovalEmail = jsonObj.containsKey("requestForApprovalEmail")?jsonObj.getString("requestForApprovalEmail"):"";
         final String requestForApprovalLanId = jsonObj.getString("requestForApprovalLanId");
         final String concurrenceLanName = jsonObj.getString("concurrenceLanName");
         final String concurrenceEmail = jsonObj.getString("concurrenceEmail");
         final String approverLanName = jsonObj.getString("approverLanName");
         final String approverEmail = jsonObj.getString("approverEmail");
         
-       
+        if (!isValidEmail(requestForApprovalEmail))
+            requestForApprovalEmail = creatorEmail;
+
         if (jsonObj.containsKey("attachment"))
         {
             jsonObj.getJsonArray("attachment").forEach(a->{
@@ -71,7 +74,7 @@ public class InitCaseNonIndi extends Case
         }
         
      
-        jsonForSignavio(
+        jsonForSignavio2(
         "NONINDI_AML",
         refNo,
         compRegNo,
@@ -88,6 +91,7 @@ public class InitCaseNonIndi extends Case
         approverEmail,
         attachmentIdJArray,
         qnaJArray,
+        token,
         ar->{
             if (ar.succeeded())
             {
@@ -156,15 +160,15 @@ public class InitCaseNonIndi extends Case
                     {
                         field.put("value", creatorLanId);
                     }
-                    else if (field.getString("name").toLowerCase().equals("request for approval name"))
+                    else if (field.getString("name").toLowerCase().equals("requestor name"))
                     {
                         field.put("value", requestForApprovalName);
                     }
-                    else if (field.getString("name").toLowerCase().equals("request for approval email"))
+                    else if (field.getString("name").toLowerCase().equals("requestor email"))
                     {
                         field.put("value", requestForApprovalEmail);
                     }
-                    else if (field.getString("name").toLowerCase().equals("request for approval lan id"))
+                    else if (field.getString("name").toLowerCase().equals("requestor lan id"))
                     {
                         field.put("value", requestForApprovalLanId);
                     }
@@ -204,4 +208,133 @@ public class InitCaseNonIndi extends Case
        
     }
   
+    private void jsonForSignavio2(
+        String eddCode, 
+        String refNo,
+        String compRegNo,
+        String compName,
+        String creatorLanName,
+        String creatorEmail,
+        String creatorLanId,
+        String requestForApprovalName,
+        String requestForApprovalEmail,
+        String requestForApprovalLanId,
+        String concurrenceLanName,
+        String concurrenceEmail,
+        String approverLanName,
+        String approverEmail,
+        JsonArray attachmentIdJArray,
+        JsonArray qnaJArray,
+        String authToken,
+        Handler<AsyncResult<JsonObject>> aHandler)
+    {
+        // String eddCode = "";
+        // for(int k=0;k<amlObjects.size();k++){
+                        
+        //     eddCode = amlObjects.get(k).getString("eddCode");
+
+        mongo.findOne(CollectionHelper.WF_TRIGGER.collection(), new JsonObject().put("name", eddCode).put("version", "1.0"), null, ar -> {
+            if (ar.succeeded()) {
+                String sourceWorkflowId = ar.result().getJsonObject("triggerInstance").getString("sourceWorkflowId");
+                // System.err.println(sourceWorkflowId);
+                // System.err.println(new SignavioApiPathHelper().getWorkflowStartInfo(sourceWorkflowId));
+                String jsonStr = WebClientHelper.get(new SignavioApiPathHelper().getWorkflowStartInfo(sourceWorkflowId), authToken);
+                // System.err.println(jsonStr);
+                JsonObject startInfo = new JsonObject(jsonStr);
+                JsonArray fields = startInfo.getJsonObject("form").getJsonArray("fields");
+
+                fields.forEach(f->{
+                    JsonObject field = (JsonObject) f;
+                  
+                    if (field.getString("name").toLowerCase().equals("reference number"))
+                    {
+                        field.put("value", refNo);
+                    }
+                    else if (field.getString("name").toLowerCase().equals("company registration number"))
+                    {
+                        field.put("value", compRegNo);
+                    }
+                    else if (field.getString("name").toLowerCase().equals("company name"))
+                    {
+                        field.put("value", compName);
+                    }
+                    else if (field.getString("name").toLowerCase().equals("creator lan name"))
+                    {
+                        field.put("value", creatorLanName);
+                    }
+                    else if (field.getString("name").toLowerCase().equals("creator email"))
+                    {
+                        field.put("value", creatorEmail);
+                    }
+                    else if (field.getString("name").toLowerCase().equals("creator lan id"))
+                    {
+                        field.put("value", creatorLanId);
+                    }
+                    else if (field.getString("name").toLowerCase().equals("requestor name"))
+                    {
+                        field.put("value", requestForApprovalName);
+                    }
+                    else if (field.getString("name").toLowerCase().equals("requestor email"))
+                    {
+                        field.put("value", requestForApprovalEmail);
+                    }
+                    else if (field.getString("name").toLowerCase().equals("requestor lan id"))
+                    {
+                        field.put("value", requestForApprovalLanId);
+                    }
+                    else if (field.getString("name").toLowerCase().equals("concurrence lan name"))
+                    {
+                        field.put("value", concurrenceLanName);
+                    }
+                    else if (field.getString("name").toLowerCase().equals("concurrence email"))
+                    {
+                        field.put("value", concurrenceEmail);
+                    }
+                    else if (field.getString("name").toLowerCase().equals("approver lan name"))
+                    {
+                        field.put("value", approverLanName);
+                    }
+                    else if (field.getString("name").toLowerCase().equals("approver email"))
+                    {
+                        field.put("value", approverEmail);
+                    }
+                    else if (field.getString("name").toLowerCase().equals("attachment"))
+                    {
+                        field.put("value", attachmentIdJArray);
+                    }
+                    else if (field.getString("name").toLowerCase().equals("questions and answers"))
+                    {
+                        field.put("value", qnaJArray);
+                    }
+                });
+
+                JsonObject fieldsObject = new JsonObject().put("fields", fields);
+                JsonObject valueObject = new JsonObject().put("value", fieldsObject);
+                JsonObject formInstanceObject = new JsonObject().put("formInstance", valueObject);
+                JsonObject dataObject = new JsonObject().put("data", formInstanceObject);
+                JsonObject triggerInstanceObject = new JsonObject().put("triggerInstance", dataObject);
+                triggerInstanceObject.getJsonObject("triggerInstance").put("sourceWorkflowId", sourceWorkflowId);
+                //System.err.println(triggerInstanceObject);
+                aHandler.handle(Future.succeededFuture(triggerInstanceObject));
+            }
+            else{
+                aHandler.handle(Future.failedFuture(ar.cause()));
+            }
+            
+        });
+  
+    }
+
+    public static boolean isValidEmail(String email) 
+    { 
+        String emailRegex = "^[a-zA-Z0-9_+&*-]+(?:\\."+ 
+                            "[a-zA-Z0-9_+&*-]+)*@" + 
+                            "(?:[a-zA-Z0-9-]+\\.)+[a-z" + 
+                            "A-Z]{2,7}$"; 
+                              
+        Pattern pat = Pattern.compile(emailRegex); 
+        if (email == null) 
+            return false; 
+        return pat.matcher(email).matches(); 
+    } 
 }

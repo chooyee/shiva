@@ -2,6 +2,7 @@ package io.vertx.shiva.signavio;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -39,22 +40,80 @@ public class InitCase extends Case
         super(mongo);
     }
 
-    public void InitWorkflow(JsonObject jsonObj, String token)
+    public void InitWorkflow(JsonObject jsonObj, String token, Handler<AsyncResult<JsonObject>> aHandler)
     {
+        JsonArray eddObjs = new JsonArray();
         List<JsonObject> amlObjs = getAMLCode(jsonObj);
         JsonObject initWf = init(jsonObj, token);
+        List<Future> futures = new ArrayList<>();
+      
+          
 
         for(int k=0;k<amlObjs.size();k++){
-                        
+           
+            Future<JsonObject> insertFuture = Future.future();       
+            futures.add(insertFuture);  
             String eddCode = amlObjs.get(k).getString("eddCode");
-            prepareWorkflowJson(eddCode, initWf.getString("idFrontFileID"), initWf.getString("idBackFileID"), initWf.getString("idCusFileID"), initWf.getString("caseCreator"), initWf.getString("branchCode"), initWf.getJsonArray("custList"), ar->{
+            prepareWorkflowJson2(eddCode, initWf.getString("idFrontFileID"), initWf.getString("idBackFileID"), initWf.getString("idCusFileID"), initWf.getString("caseCreator"), initWf.getString("branchCode"), initWf.getJsonArray("custList"), initWf.getJsonArray("attachmentIdJArray"), token, ar->{
                 if (ar.succeeded())
                 {
                    String postResult = WebClientHelper.postJson(new SignavioApiPathHelper().getCases(), token, ar.result()); 
-                   initWfTracker(postResult,jsonObj, wfHandler->{});
+                   String caseId = new JsonObject(postResult).getString("id");
+                   JsonObject edd = new JsonObject();
+                   edd.put("eddCode", eddCode);
+                   edd.put("caseId", caseId);
+                   edd.put("qna", initWf.getJsonArray("qna"));
+                   eddObjs.add(edd);
+                   initWfTracker(caseId, jsonObj, wfHandler->{});
+                   insertFuture.complete(edd);
                 }
             });
+            // prepareWorkflowJson(eddCode, initWf.getString("idFrontFileID"), initWf.getString("idBackFileID"), initWf.getString("idCusFileID"), initWf.getString("caseCreator"), initWf.getString("branchCode"), initWf.getJsonArray("custList"), ar->{
+            //     if (ar.succeeded())
+            //     {
+            //        String postResult = WebClientHelper.postJson(new SignavioApiPathHelper().getCases(), token, ar.result()); 
+            //        String caseId = new JsonObject(postResult).getString("id");
+            //        JsonObject edd = new JsonObject();
+            //        edd.put("eddCode", eddCode);
+            //        edd.put("caseId", caseId);
+            //        edd.put("qna", initWf.getJsonArray("qna"));
+            //        eddObjs.add(edd);
+            //        initWfTracker(caseId, jsonObj, wfHandler->{});
+            //        insertFuture.complete(edd);
+            //     }
+            // });
         }
+
+       
+        CompositeFuture.all(futures).setHandler(ah->{
+            System.err.println(ah.result());
+            String email = jsonObj.getString("email");
+            String branchCode = jsonObj.getString("branchCode");
+            String customerId = jsonObj.getJsonObject("application").getJsonArray("eform").getJsonObject(0).getString("idNo");
+            //System.err.println(customerId);
+            
+            JsonObject document = new JsonObject()
+            .put("customerId", customerId)
+            .put("email", email)
+            .put("branch", branchCode)
+            .put("type", "indi")
+            .put("edd", eddObjs)
+            .put("complete", false);
+            
+            mongo.insert(CollectionHelper.INDI_TRACKER.collection(), document, insertar -> {
+                if (insertar.succeeded())
+                {
+                    JsonObject result = new JsonObject();
+                    result.put("id", insertar.result());
+                    aHandler.handle(Future.succeededFuture(result));
+                }
+                else{
+                    aHandler.handle(Future.failedFuture(document.encodePrettily())); 
+                }
+            });
+        });
+       
+       
     }
     /**
      * Inititalize new workflow
@@ -66,6 +125,7 @@ public class InitCase extends Case
     {
         final String id = jsonObj.getString("id");
         final String branchCode = jsonObj.getString("branchCode");
+        JsonArray attachmentIdJArray = new JsonArray();
         //final String newCaseName = jsonObj.getString("newCaseName");
         String idFrontFileID = "";
         String idBackFileID = "";
@@ -75,6 +135,35 @@ public class InitCase extends Case
         JsonArray custList = getCustomerDetails(jsonObj);
         JsonObject product = getProductDetails(jsonObj);
         JsonArray qna = getQNA(jsonObj);
+
+        if (jsonObj.containsKey("eddCases"))
+        {
+            JsonArray eddCases = jsonObj.getJsonArray("eddCases");
+
+            for (int k = 0 ; k < eddCases.size(); k++) {
+                JsonObject eddCase = eddCases.getJsonObject(k);
+
+                int j = 1;
+                JsonArray supportingDocs = eddCase.getJsonArray("attachment");
+
+                for (int i = 0 ; i < supportingDocs.size(); i++) {
+                    j = i + 1;
+                    byte[] imageByte;
+                    JsonObject supportingDoc = supportingDocs.getJsonObject(i);
+                    String fileName = "supporting_doc_" + j + ".png";
+                    String fileContent = supportingDoc.getString("content");
+        
+                    if (fileContent.length()>0)
+                    {
+                        imageByte = Base64.getDecoder().decode(fileContent);
+                        JsonObject fileJsonAtt = new JsonObject(WebClientHelper.uploadToSignavio(imageByte,fileName, token));
+                        String attachmentId = fileJsonAtt.getString("id");
+                        attachmentIdJArray.add(attachmentId);
+                    }
+                }
+               
+            };
+        }
 
         if (jsonObj.containsKey("efaces"));
         {
@@ -130,7 +219,8 @@ public class InitCase extends Case
         result.put("caseCreator", caseCreator);
         result.put("branchCode", branchCode);
         result.put("custList", custList);
-        
+        result.put("qna", qna);
+        result.put("attachmentIdJArray", attachmentIdJArray);
         return result;
         // prepareWorkflowJson(getAMLCode(jsonObj), idFrontFileID, idBackFileID, idCusFileID, caseCreator,branchCode, custList, ar->{
         //     if (ar.succeeded())
@@ -692,7 +782,81 @@ public class InitCase extends Case
      
     }
 
-    private void prepareWorkflowJson(String eddCode, String idfront, String idback, String customerDetails, String caseCreator,String branchCode, JsonArray custDetails, Handler<AsyncResult<JsonObject>> aHandler)
+    // private void prepareWorkflowJson(String eddCode, String idfront, String idback, String customerDetails, String caseCreator,String branchCode, JsonArray custDetails, Handler<AsyncResult<JsonObject>> aHandler)
+    // {
+    //     // String eddCode = "";
+    //     // for(int k=0;k<amlObjects.size();k++){
+                        
+    //     //     eddCode = amlObjects.get(k).getString("eddCode");
+
+    //     mongo.findOne(CollectionHelper.WF_TRIGGER.collection(), new JsonObject().put("name", eddCode).put("version", "1.0"), null, ar -> {
+    //         if (ar.succeeded()) {
+    //             JsonObject t = new JsonObject().put("triggerInstance", ar.result().getJsonObject("triggerInstance"));
+
+    //             JsonArray fields = t.getJsonObject("triggerInstance").getJsonObject("data").getJsonObject("formInstance").getJsonObject("value").getJsonArray("fields");
+    //             fields.forEach(f->{
+    //                 JsonObject field = (JsonObject) f;
+
+    //                 if (field.getString("name").toLowerCase().equals("edd code"))
+    //                 {
+    //                     field.put("value", eddCode);
+                    
+    //                 }
+    //                 if (field.getString("name").toLowerCase().equals("id front"))
+    //                 {
+    //                     if (idfront.length()>0)
+    //                         field.put("value", idfront);
+    //                 }
+    //                 else if (field.getString("name").toLowerCase().equals("id back"))
+    //                 {
+    //                     if (idback.length()>0)
+    //                         field.put("value", idback);
+    //                 }
+    //                 else if (field.getString("name").toLowerCase().equals("customer details"))
+    //                 {
+    //                     field.put("value", customerDetails);
+    //                 }
+    //                 else if (field.getString("name").toLowerCase().equals("case creator"))
+    //                 {
+    //                     field.put("value", caseCreator);
+    //                 }
+    //                 else if (field.getString("name").toLowerCase().equals("branch code"))
+    //                 {
+    //                     field.put("value", branchCode);
+    //                 }
+    //                 else if (field.getString("name").toLowerCase().equals("customer name"))
+    //                 {
+    //                     custDetails.forEach(c->{
+                            
+    //                         JsonObject cus = (JsonObject)c;
+    //                         JsonObject identity = cus.getJsonObject("identityInfo");
+    //                         field.put("value",  identity.getString("fullName"));
+                            
+    //                     });
+                        
+    //                 }
+    //                 else if (field.getString("name").toLowerCase().equals("nric"))
+    //                 {
+    //                     custDetails.forEach(c->{
+    //                         JsonObject cus = (JsonObject)c;
+    //                         field.put("value", cus.getString("idNo"));
+    //                     });
+                        
+                        
+    //                 }
+    //             });
+    //             //System.err.println(t);
+    //             aHandler.handle(Future.succeededFuture(t));
+    //         }
+    //         else{
+    //             aHandler.handle(Future.failedFuture(ar.cause()));
+    //         }
+            
+    //     });
+  
+    // }
+ 
+    private void prepareWorkflowJson2(String eddCode, String idfront, String idback, String customerDetails, String caseCreator,String branchCode, JsonArray custDetails,JsonArray supportingDocs, String authToken, Handler<AsyncResult<JsonObject>> aHandler)
     {
         // String eddCode = "";
         // for(int k=0;k<amlObjects.size();k++){
@@ -701,9 +865,14 @@ public class InitCase extends Case
 
         mongo.findOne(CollectionHelper.WF_TRIGGER.collection(), new JsonObject().put("name", eddCode).put("version", "1.0"), null, ar -> {
             if (ar.succeeded()) {
-                JsonObject t = new JsonObject().put("triggerInstance", ar.result().getJsonObject("triggerInstance"));
+                String sourceWorkflowId = ar.result().getJsonObject("triggerInstance").getString("sourceWorkflowId");
+                // System.err.println(sourceWorkflowId);
+                // System.err.println(new SignavioApiPathHelper().getWorkflowStartInfo(sourceWorkflowId));
+                String jsonStr = WebClientHelper.get(new SignavioApiPathHelper().getWorkflowStartInfo(sourceWorkflowId), authToken);
+                // System.err.println(jsonStr);
+                JsonObject startInfo = new JsonObject(jsonStr);
+                JsonArray fields = startInfo.getJsonObject("form").getJsonArray("fields");
 
-                JsonArray fields = t.getJsonObject("triggerInstance").getJsonObject("data").getJsonObject("formInstance").getJsonObject("value").getJsonArray("fields");
                 fields.forEach(f->{
                     JsonObject field = (JsonObject) f;
 
@@ -753,10 +922,20 @@ public class InitCase extends Case
                         });
                         
                         
+                    }else if (field.getString("name").toLowerCase().equals("supporting documents"))
+                    {
+                        field.put("value", supportingDocs);
                     }
                 });
-                //System.err.println(t);
-                aHandler.handle(Future.succeededFuture(t));
+
+                JsonObject fieldsObject = new JsonObject().put("fields", fields);
+                JsonObject valueObject = new JsonObject().put("value", fieldsObject);
+                JsonObject formInstanceObject = new JsonObject().put("formInstance", valueObject);
+                JsonObject dataObject = new JsonObject().put("data", formInstanceObject);
+                JsonObject triggerInstanceObject = new JsonObject().put("triggerInstance", dataObject);
+                triggerInstanceObject.getJsonObject("triggerInstance").put("sourceWorkflowId", sourceWorkflowId);
+                //System.err.println(triggerInstanceObject);
+                aHandler.handle(Future.succeededFuture(triggerInstanceObject));
             }
             else{
                 aHandler.handle(Future.failedFuture(ar.cause()));
@@ -765,5 +944,4 @@ public class InitCase extends Case
         });
   
     }
- 
 }

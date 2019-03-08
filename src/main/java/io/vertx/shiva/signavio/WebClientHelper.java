@@ -58,6 +58,14 @@ public class WebClientHelper{
         return response.readEntity(String.class);
     }
 
+    public static String get(String url, String authToken)
+    {
+        WebClient client =  WebClient.create(url);
+        client.header("Authorization", authToken);
+        client.type("application/json"); 
+        return client.get().readEntity(String.class);
+       
+    }
     public static String postJson(String url, String authToken, Object pojo)
     {
         WebClient client =  WebClient.create(url);

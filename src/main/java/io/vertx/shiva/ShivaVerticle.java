@@ -235,14 +235,12 @@ public class ShivaVerticle extends AbstractVerticle {
           return;
         }
         
-        initObject.InitWorkflow(jsonObj, ar.result());
-
-        initObject.initIndiWfMain(jsonObj,  aHandler->{
+        initObject.InitWorkflow(jsonObj, ar.result(), aHandler->{
           if (aHandler.succeeded()){    
               routingContext.response()
               .setStatusCode(200)
               .putHeader("content-type", "application/json; charset=utf-8")
-              .end(aHandler.result());
+              .end(Json.encodePrettily(aHandler.result()));
           }
           else{
              routingContext.response()
