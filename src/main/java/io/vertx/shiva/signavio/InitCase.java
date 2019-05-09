@@ -57,15 +57,17 @@ public class InitCase extends Case
             prepareWorkflowJson2(eddCode, initWf.getString("idFrontFileID"), initWf.getString("idBackFileID"), initWf.getString("idCusFileID"), initWf.getString("caseCreator"), initWf.getString("branchCode"), initWf.getJsonArray("custList"), initWf.getJsonArray("attachmentIdJArray"), token, ar->{
                 if (ar.succeeded())
                 {
-                   String postResult = WebClientHelper.postJson(new SignavioApiPathHelper().getCases(), token, ar.result()); 
-                   String caseId = new JsonObject(postResult).getString("id");
-                   JsonObject edd = new JsonObject();
-                   edd.put("eddCode", eddCode);
-                   edd.put("caseId", caseId);
-                   edd.put("qna", initWf.getJsonArray("qna"));
-                   eddObjs.add(edd);
-                   initWfTracker(caseId, jsonObj, wfHandler->{});
-                   insertFuture.complete(edd);
+                    System.err.println(new SignavioApiPathHelper().getCases());
+                    String postResult = WebClientHelper.postJson(new SignavioApiPathHelper().getCases(), token, ar.result()); 
+                    System.err.println(postResult);
+                    String caseId = new JsonObject(postResult).getString("id");
+                    JsonObject edd = new JsonObject();
+                    edd.put("eddCode", eddCode);
+                    edd.put("caseId", caseId);
+                    edd.put("qna", initWf.getJsonArray("qna"));
+                    eddObjs.add(edd);
+                    initWfTracker(caseId, jsonObj, wfHandler->{});
+                    insertFuture.complete(edd);
                 }
             });
             // prepareWorkflowJson(eddCode, initWf.getString("idFrontFileID"), initWf.getString("idBackFileID"), initWf.getString("idCusFileID"), initWf.getString("caseCreator"), initWf.getString("branchCode"), initWf.getJsonArray("custList"), ar->{
@@ -866,7 +868,8 @@ public class InitCase extends Case
         mongo.findOne(CollectionHelper.WF_TRIGGER.collection(), new JsonObject().put("name", eddCode).put("version", "1.0"), null, ar -> {
             if (ar.succeeded()) {
                 String sourceWorkflowId = ar.result().getJsonObject("triggerInstance").getString("sourceWorkflowId");
-                // System.err.println(sourceWorkflowId);
+                System.err.println(eddCode);
+                System.err.println(sourceWorkflowId);
                 // System.err.println(new SignavioApiPathHelper().getWorkflowStartInfo(sourceWorkflowId));
                 String jsonStr = WebClientHelper.get(new SignavioApiPathHelper().getWorkflowStartInfo(sourceWorkflowId), authToken);
                 // System.err.println(jsonStr);
@@ -924,7 +927,10 @@ public class InitCase extends Case
                         
                     }else if (field.getString("name").toLowerCase().equals("supporting documents"))
                     {
-                        field.put("value", supportingDocs);
+                        if(supportingDocs != null && supportingDocs.size() > 0 ){
+                            field.put("value", supportingDocs);
+                         }
+                       
                     }
                 });
 
@@ -934,7 +940,7 @@ public class InitCase extends Case
                 JsonObject dataObject = new JsonObject().put("data", formInstanceObject);
                 JsonObject triggerInstanceObject = new JsonObject().put("triggerInstance", dataObject);
                 triggerInstanceObject.getJsonObject("triggerInstance").put("sourceWorkflowId", sourceWorkflowId);
-                //System.err.println(triggerInstanceObject);
+                System.err.println(triggerInstanceObject);
                 aHandler.handle(Future.succeededFuture(triggerInstanceObject));
             }
             else{
