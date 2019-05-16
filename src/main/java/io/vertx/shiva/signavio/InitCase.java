@@ -120,7 +120,8 @@ public class InitCase extends Case {
             JsonObject question = questions.getJsonObject(i);
             for (int k = 0; k < QnAs.size(); k++) {
                 JsonObject qna = QnAs.getJsonObject(k);
-                if (qna.getString("questionId").toLowerCase() == question.getString("id").toLowerCase()) {
+                if (qna.getString("questionId").toLowerCase()
+                        .equalsIgnoreCase(question.getString("id").toLowerCase())) {
                     filter.add(qna);
                 }
             }
