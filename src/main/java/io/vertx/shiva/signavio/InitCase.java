@@ -114,8 +114,22 @@ public class InitCase extends Case
                 }
             });
         });
-       
-       
+
+    }
+
+    public JsonArray filterQnA(JsonArray QnAs, JsonArray questions) {
+        JsonArray filter = new JsonArray();
+        for (int i = 0; i < questions.size(); i++) {
+            JsonObject question = questions.getJsonObject(i);
+            for (int k = 0; k < QnAs.size(); k++) {
+                JsonObject qna = QnAs.getJsonObject(k);
+                if (qna.getString("questionId").toLowerCase()
+                        .equalsIgnoreCase(question.getString("id").toLowerCase())) {
+                    filter.add(qna);
+                }
+            }
+        }
+        return filter;
     }
     /**
      * Inititalize new workflow
