@@ -162,14 +162,13 @@ public class InitCase extends Case {
                 note = eddCase.getString("caseStatusReason");
                 int j = 1;
                 JsonArray supportingDocs = eddCase.getJsonArray("attachment");
-
                 for (int i = 0; i < supportingDocs.size(); i++) {
                     j = i + 1;
                     byte[] imageByte;
                     JsonObject supportingDoc = supportingDocs.getJsonObject(i);
-                    String fileName = "supporting_doc_" + j + ".png";
+                    String fileName = (supportingDoc.getString("label").isEmpty() ? "supporting_doc_" + j
+                            : supportingDoc.getString("label")) + ".png";
                     String fileContent = supportingDoc.getString("content");
-
                     if (fileContent.length() > 0) {
                         imageByte = Base64.getDecoder().decode(fileContent);
                         JsonObject fileJsonAtt = new JsonObject(
@@ -178,7 +177,6 @@ public class InitCase extends Case {
                         attachmentIdJArray.add(attachmentId);
                     }
                 }
-
             }
         }
 
