@@ -899,7 +899,8 @@ public class InitCase extends Case {
                                     field.put("value", cus.getString("idNo"));
                                 });
 
-                            } else if (field.getString("name").toLowerCase().equals("supporting documents")) {
+                            } else if (field.getString("name").toLowerCase().equals("supporting documents")
+                                    || field.getString("name").toLowerCase().equals("supporting document")) {
                                 field.put("value", supportingDocs);
                             }
                         });
