@@ -139,7 +139,7 @@ public class InitCase extends Case {
     public JsonObject init(JsonObject jsonObj, String token) {
         final String id = jsonObj.getString("id");
         final String branchCode = jsonObj.getString("branchCode");
-        JsonArray attachmentIdJArray = new JsonArray();
+        JsonArray attachmentJArray = new JsonArray();
         // final String newCaseName = jsonObj.getString("newCaseName");
         String idFrontFileID = "";
         String idBackFileID = "";
@@ -174,7 +174,10 @@ public class InitCase extends Case {
                         JsonObject fileJsonAtt = new JsonObject(
                                 WebClientHelper.uploadToSignavio(imageByte, fileName, token));
                         String attachmentId = fileJsonAtt.getString("id");
-                        attachmentIdJArray.add(attachmentId);
+                        JsonObject attachment = new JsonObject();
+                        attachment.put("attachmentId", attachmentId);
+                        attachment.put("eddCode", supportingDoc.getString("eddCode"));
+                        attachmentJArray.add(attachment);
                     }
                 }
             }
@@ -233,7 +236,7 @@ public class InitCase extends Case {
         result.put("checker", checker);
         result.put("maker", maker);
         result.put("note", note);
-        result.put("attachmentIdJArray", attachmentIdJArray);
+        result.put("attachmentIdJArray", attachmentJArray);
         return result;
         // prepareWorkflowJson(getAMLCode(jsonObj), idFrontFileID, idBackFileID,
         // idCusFileID, caseCreator,branchCode, custList, ar->{
@@ -901,7 +904,14 @@ public class InitCase extends Case {
 
                             } else if (field.getString("name").toLowerCase().equals("supporting documents")
                                     || field.getString("name").toLowerCase().equals("supporting document")) {
-                                field.put("value", supportingDocs);
+                                JsonArray supDocIds = new JsonArray();
+                                supportingDocs.forEach(x -> {
+                                    JsonObject supDoc = (JsonObject) x;
+                                    if (supDoc.getString("eddCode").toLowerCase().equals(eddCode)) {
+                                        supDocIds.add(supDoc.getString("attachmentId"));
+                                    }
+                                });
+                                field.put("value", supDocIds);
                             }
                         });
 
