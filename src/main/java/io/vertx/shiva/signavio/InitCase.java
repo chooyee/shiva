@@ -907,7 +907,7 @@ public class InitCase extends Case {
                                 JsonArray supDocIds = new JsonArray();
                                 supportingDocs.forEach(x -> {
                                     JsonObject supDoc = (JsonObject) x;
-                                    if (supDoc.getString("eddCode").toLowerCase().equals(eddCode)) {
+                                    if (supDoc.getString("eddCode").equalsIgnoreCase(eddCode)) {
                                         supDocIds.add(supDoc.getString("attachmentId"));
                                     }
                                 });
