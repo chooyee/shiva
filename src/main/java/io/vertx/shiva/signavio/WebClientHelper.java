@@ -54,7 +54,6 @@ public class WebClientHelper{
         // atts.add(new Attachment("Authorization","form-data","sEu4qiFVJqKNmNDsGIW1yKFFmZWH6otRqBtK"));
         MultipartBody body = new MultipartBody(atts);
         Response response= client.post(body);
-       
         return response.readEntity(String.class);
     }
 
