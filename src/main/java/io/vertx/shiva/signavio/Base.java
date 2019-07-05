@@ -38,7 +38,8 @@ public class Base
         ASSIGN_SUCCESS("abmb_set_assignee_success"),
         WF_TRIGGER("abmb_workflow_trigger"),
         CONFIG("abmb_config"),
-        LOG("abmb_log");
+        LOG("abmb_log"),
+        CODE_MAPPING("abmb_indi_mapping");
        
     
         private String collection;
