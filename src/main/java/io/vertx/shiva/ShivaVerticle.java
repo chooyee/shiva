@@ -103,6 +103,7 @@ public class ShivaVerticle extends AbstractVerticle {
     router.get("/api/v1/task/assign/:caseid").handler(this::setAssignee);  
 
     router.get("/api/v1/test/mongo").handler(this::mongoTest);
+    router.get("/api/v1/test/future/:name").handler(this::futureTest);
 
     // Create the HTTP server and pass the "accept" method to the request handler.
     vertx
@@ -334,4 +335,49 @@ public class ShivaVerticle extends AbstractVerticle {
   //     byte[] imageByte = Base64.getDecoder().decode(encodedString);
   //     return imageByte;
   // }
+
+  private void futureTest(RoutingContext routingContext)
+  {
+    String name = routingContext.request().getParam("name");
+
+    String aName = concatWithHello(name).result();
+    name = concatWithExclamation(aName).result();
+    routingContext.response()
+        .setStatusCode(200)
+        .putHeader("content-type", "application/json; charset=utf-8")
+        .end(Json.encodePrettily(name));
+    // Future<String> updatingProcess = concatWithExclamation(aName);
+    // updatingProcess.setHandler(asyncResult -> {
+    //   if (asyncResult.succeeded()) {
+    //     routingContext.response()
+    //     .setStatusCode(200)
+    //     .putHeader("content-type", "application/json; charset=utf-8")
+    //     .end(Json.encodePrettily(asyncResult.result()));
+    //   }
+    //   else {
+    //     // oh ! we have a problem... 
+    //   }
+    // });
+   
+  }
+
+  public Future<String> concatWithHello(String aName) {
+    Future<String> future = Future.future();
+    for(int i =0; i<100000; i++)
+    {
+      System.err.println(i);
+    }
+    future.complete("Hello " + aName);
+    
+    return future;
+  }
+
+  public Future<String> concatWithExclamation(String aName) {
+    Future<String> future = Future.future();
+    future.complete(aName + "!");
+    
+    return future;
+  }
+  
+
 }
