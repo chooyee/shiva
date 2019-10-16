@@ -25,6 +25,9 @@ import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.net.PemKeyCertOptions;
 import io.vertx.core.net.TCPSSLOptions;
 
+import io.vertx.ext.sql.SQLConnection;
+import io.vertx.ext.sql.SQLClient;
+import io.vertx.ext.asyncsql.MySQLClient;
 
 public class ShivaVerticle extends AbstractVerticle {
 
@@ -189,8 +192,25 @@ public class ShivaVerticle extends AbstractVerticle {
     String password = "secret";
     String sql = "SELECT * FROM users WHERE id='"+ routingContext.request().getParam("id") + "'";
 
-    JsonObject mySQLClientConfig = new JsonObject().put("host", "mymysqldb.mycompany");
-    
+    JsonObject jsonObject = new JsonObject();
+    jsonObject.put("host", "localhost");
+    jsonObject.put("port", 3306);
+    jsonObject.put("username", "root");
+    jsonObject.put("password", password);
+    jsonObject.put("database", "mysql");
+
+    SQLClient  sqlClient = MySQLClient.createShared(getVertx(), jsonObject);
+    sqlClient.getConnection(connectedResult -> {
+     
+      SQLConnection connection = connectedResult.result();
+
+      connection.query(sql, queryResult -> {
+        if (!queryResult.succeeded()) {
+            queryResult.cause().printStackTrace();
+        }
+
+      });
+    });
     
     if (id == null) {
       routingContext.response().setStatusCode(400).end();
