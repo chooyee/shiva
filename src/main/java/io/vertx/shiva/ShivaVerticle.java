@@ -25,6 +25,13 @@ import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.net.PemKeyCertOptions;
 import io.vertx.core.net.TCPSSLOptions;
 
+import io.vertx.mysqlclient.MySQLConnectOptions;
+import io.vertx.mysqlclient.MySQLConnection;
+import io.vertx.mysqlclient.MySQLPool;
+
+import javax.sql.*;
+import java.sql.Connection;
+
 public class ShivaVerticle extends AbstractVerticle {
 
   private static final int HTTP1_PORT = 8527;
@@ -185,7 +192,47 @@ public class ShivaVerticle extends AbstractVerticle {
   }
   private void getUserTokenByID(RoutingContext routingContext) {
     final String id = routingContext.request().getParam("id");
-    
+    String password = "secret";
+    MySQLConnectOptions connectOptions = new MySQLConnectOptions()
+    .setPort(3306)
+    .setHost("the-host")
+    .setDatabase("the-db")
+    .setUser("user")
+    .setPassword(password);
+
+  // Pool options
+  PoolOptions poolOptions = new PoolOptions()
+    .setMaxSize(5);
+
+  // Create the pooled client
+  MySQLPool client = MySQLPool.pool(vertx, connectOptions, poolOptions);
+
+  // Get a connection from the pool
+  client.getConnection(ar1 -> {
+
+    if (ar1.succeeded()) {
+
+      System.out.println("Connected");
+
+      // Obtain our connection
+      SqlConnection conn = ar1.result();
+
+      // All operations execute on the same connection
+      conn.query("SELECT * FROM users WHERE id='"+ routingContext.request().getParam("id") + "'", ar2 -> {
+        if (ar2.succeeded()) {
+          conn.query("SELECT * FROM users WHERE id='" +id +"'", ar3 -> {
+            // Release the connection to the pool
+            conn.close();
+          });
+        } else {
+          // Release the connection to the pool
+          conn.close();
+        }
+      });
+    } else {
+      System.out.println("Could not connect: " + ar1.cause().getMessage());
+    }
+  });
     if (id == null) {
       routingContext.response().setStatusCode(400).end();
     } else {
