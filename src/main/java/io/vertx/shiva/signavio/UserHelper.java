@@ -19,7 +19,18 @@ public class UserHelper{
      * @param aHandler
      */
     public static void getUserToken(MongoClient mongo, String id, Handler<AsyncResult<String>> aHandler) {
-    
+        // All operations execute on the same connection
+    conn.query("SELECT * FROM users WHERE id='"+ id + "'", ar2 -> {
+      if (ar2.succeeded()) {
+        conn.query("SELECT * FROM users WHERE id='" +id +"'", ar3 -> {
+          // Release the connection to the pool
+          conn.close();
+        });
+      } else {
+        // Release the connection to the pool
+        conn.close();
+      }
+    });
         mongo.findOne(Base.CollectionHelper.USERS.collection(), new JsonObject().put("emailAddressLower", id), null, ar -> {
           if (ar.succeeded()) {
             if (ar.result() == null) {
