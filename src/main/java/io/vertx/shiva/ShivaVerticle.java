@@ -1,33 +1,33 @@
 package io.vertx.shiva;
-import io.vertx.shiva.liquor.*;
-import io.vertx.shiva.signavio.*;
+
+import java.util.HashSet;
+import java.util.Set;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
+import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.net.PemKeyCertOptions;
+import io.vertx.core.net.TCPSSLOptions;
+import io.vertx.ext.asyncsql.MySQLClient;
 import io.vertx.ext.mongo.MongoClient;
+import io.vertx.ext.sql.SQLClient;
+import io.vertx.ext.sql.SQLConnection;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
-import io.vertx.ext.web.handler.StaticHandler;
-import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.handler.CorsHandler;
-
-import java.util.HashSet;
-import java.util.Set;
-
-import io.vertx.core.http.HttpServerOptions;
-import io.vertx.core.net.PemKeyCertOptions;
-import io.vertx.core.net.TCPSSLOptions;
-
-import io.vertx.ext.sql.SQLConnection;
-import io.vertx.ext.sql.SQLClient;
-import io.vertx.ext.asyncsql.MySQLClient;
+import io.vertx.ext.web.handler.StaticHandler;
+import io.vertx.shiva.signavio.Case;
+import io.vertx.shiva.signavio.InitCase;
+import io.vertx.shiva.signavio.InitCaseNonIndi;
+import io.vertx.shiva.signavio.UserHelper;
 
 public class ShivaVerticle extends AbstractVerticle {
 
@@ -108,6 +108,7 @@ public class ShivaVerticle extends AbstractVerticle {
 
     router.get("/api/v1/test/mongo").handler(this::mongoTest);
     router.get("/api/v1/test/future/:name").handler(this::futureTest);
+    router.get("/api/v1/users/:id").handler(this::getCustName);
 
     // Create the HTTP server and pass the "accept" method to the request handler.
     vertx
@@ -187,6 +188,41 @@ public class ShivaVerticle extends AbstractVerticle {
     
     
   }
+
+   private void getCustName(RoutingContext routingContext) {
+    final String id = routingContext.request().getParam("id");
+    String password = "Alliance8527";
+    String sql = "SELECT * FROM users WHERE id='"+ routingContext.request().getParam("id") + "'";
+
+    JsonObject jsonObject = new JsonObject();
+    jsonObject.put("host", "mariadb2.c9qojaalt8wu.ap-southeast-1.rds.amazonaws.com");
+    jsonObject.put("port", 3306);
+    jsonObject.put("username", "admin");
+    jsonObject.put("password", password);
+    jsonObject.put("database", "shiva");
+
+    SQLClient  sqlClient = MySQLClient.createShared(getVertx(), jsonObject);
+    sqlClient.getConnection(connectedResult -> {
+     
+      SQLConnection connection = connectedResult.result();
+
+      connection.query(sql, queryResult -> {
+        if (!queryResult.succeeded()) {
+           for (io.vertx.core.json.JsonArray line : queryResult.result().getResults()) {
+              System.out.println(line.encode());
+            }
+             routingContext.response()
+              .setStatusCode(200)
+              .putHeader("content-type", "application/json; charset=utf-8")
+              .end();
+        }
+
+      });
+    });
+    
+   
+  }
+  
   private void getUserTokenByID(RoutingContext routingContext) {
     final String id = routingContext.request().getParam("id");
     // String password = "secret";
