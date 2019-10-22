@@ -37,6 +37,8 @@ public class ShivaVerticle extends AbstractVerticle {
 
   public static final String COLLECTION = "signavio";
   private MongoClient mongo;
+  private SQLClient  sqlClient;
+  private String password = "Alliance8527";
 
   // Convenience method so you can run it in your IDE
   // public static void main(String[] args) {
@@ -59,6 +61,15 @@ public class ShivaVerticle extends AbstractVerticle {
     //System.out.println("Shiva started with Port:" + config().getInteger("http.port", 8282));
     // Create a Mongo client
     mongo = MongoClient.createShared(vertx, config());
+    
+    JsonObject jsonObject = new JsonObject();
+    jsonObject.put("host", "mariadb2.c9qojaalt8wu.ap-southeast-1.rds.amazonaws.com");
+    jsonObject.put("port", 3306);
+    jsonObject.put("username", "admin");
+    jsonObject.put("password", password);
+    jsonObject.put("database", "shiva");
+
+    sqlClient = MySQLClient.createShared(getVertx(), jsonObject);
 
     startWebApp((http) -> completeStartup(http, fut));
   }
@@ -191,17 +202,10 @@ public class ShivaVerticle extends AbstractVerticle {
 
    private void getCustName(RoutingContext routingContext) {
     final String id = routingContext.request().getParam("id");
-    String password = "Alliance8527";
+    
     String sql = "SELECT * FROM users WHERE id="+ id;
 
-    JsonObject jsonObject = new JsonObject();
-    jsonObject.put("host", "mariadb2.c9qojaalt8wu.ap-southeast-1.rds.amazonaws.com");
-    jsonObject.put("port", 3306);
-    jsonObject.put("username", "admin");
-    jsonObject.put("password", password);
-    jsonObject.put("database", "shiva");
-
-    SQLClient  sqlClient = MySQLClient.createShared(getVertx(), jsonObject);
+   
     sqlClient.getConnection(connectedResult -> {
      
       SQLConnection connection = connectedResult.result();
