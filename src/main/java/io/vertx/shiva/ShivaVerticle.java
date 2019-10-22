@@ -116,7 +116,7 @@ public class ShivaVerticle extends AbstractVerticle {
         .listen(
             // Retrieve the port from the configuration,
             // default to 8080.
-            config().getInteger("https.port", 80),
+            config().getInteger("https.port", 8080),
             next
         );
   }
