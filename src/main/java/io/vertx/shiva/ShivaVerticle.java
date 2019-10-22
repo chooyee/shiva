@@ -111,12 +111,12 @@ public class ShivaVerticle extends AbstractVerticle {
 
     // Create the HTTP server and pass the "accept" method to the request handler.
     vertx
-        .createHttpServer(createOptions(true))
+        .createHttpServer()
         .requestHandler(router::accept)
         .listen(
             // Retrieve the port from the configuration,
             // default to 8080.
-            config().getInteger("https.port", 8080),
+            config().getInteger("http.port", 8080),
             next
         );
   }
