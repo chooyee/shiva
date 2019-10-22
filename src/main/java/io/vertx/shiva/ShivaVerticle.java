@@ -189,28 +189,28 @@ public class ShivaVerticle extends AbstractVerticle {
   }
   private void getUserTokenByID(RoutingContext routingContext) {
     final String id = routingContext.request().getParam("id");
-    String password = "secret";
-    String sql = "SELECT * FROM users WHERE id='"+ routingContext.request().getParam("id") + "'";
+    // String password = "secret";
+    // String sql = "SELECT * FROM users WHERE id='"+ routingContext.request().getParam("id") + "'";
 
-    JsonObject jsonObject = new JsonObject();
-    jsonObject.put("host", "localhost");
-    jsonObject.put("port", 3306);
-    jsonObject.put("username", "root");
-    jsonObject.put("password", password);
-    jsonObject.put("database", "mysql");
+    // JsonObject jsonObject = new JsonObject();
+    // jsonObject.put("host", "localhost");
+    // jsonObject.put("port", 3306);
+    // jsonObject.put("username", "root");
+    // jsonObject.put("password", password);
+    // jsonObject.put("database", "mysql");
 
-    SQLClient  sqlClient = MySQLClient.createShared(getVertx(), jsonObject);
-    sqlClient.getConnection(connectedResult -> {
+    // SQLClient  sqlClient = MySQLClient.createShared(getVertx(), jsonObject);
+    // sqlClient.getConnection(connectedResult -> {
      
-      SQLConnection connection = connectedResult.result();
+    //   SQLConnection connection = connectedResult.result();
 
-      connection.query(sql, queryResult -> {
-        if (!queryResult.succeeded()) {
-            queryResult.cause().printStackTrace();
-        }
+    //   connection.query(sql, queryResult -> {
+    //     if (!queryResult.succeeded()) {
+    //         queryResult.cause().printStackTrace();
+    //     }
 
-      });
-    });
+    //   });
+    // });
     
     if (id == null) {
       routingContext.response().setStatusCode(400).end();
