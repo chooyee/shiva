@@ -192,7 +192,7 @@ public class ShivaVerticle extends AbstractVerticle {
    private void getCustName(RoutingContext routingContext) {
     final String id = routingContext.request().getParam("id");
     String password = "Alliance8527";
-    String sql = "SELECT * FROM users WHERE id='"+ routingContext.request().getParam("id") + "'";
+    String sql = "SELECT * FROM users WHERE id="+ id;
 
     JsonObject jsonObject = new JsonObject();
     jsonObject.put("host", "mariadb2.c9qojaalt8wu.ap-southeast-1.rds.amazonaws.com");
@@ -207,14 +207,12 @@ public class ShivaVerticle extends AbstractVerticle {
       SQLConnection connection = connectedResult.result();
 
       connection.query(sql, queryResult -> {
-        if (!queryResult.succeeded()) {
-           for (io.vertx.core.json.JsonArray line : queryResult.result().getResults()) {
-              System.out.println(line.encode());
-            }
+        if (queryResult.succeeded()) {
+          
              routingContext.response()
               .setStatusCode(200)
               .putHeader("content-type", "application/json; charset=utf-8")
-              .end();
+              .end(Json.encodePrettily(queryResult.result().getResults()));
         }
 
       });
