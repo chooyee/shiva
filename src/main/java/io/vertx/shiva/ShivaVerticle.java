@@ -213,13 +213,20 @@ public class ShivaVerticle extends AbstractVerticle {
       connection.query(sql, queryResult -> {
         if (queryResult.succeeded()) {
           
-             routingContext.response()
-              .setStatusCode(200)
-              .putHeader("content-type", "application/json; charset=utf-8")
-              .end(Json.encodePrettily(queryResult.result().getResults()));
+          routingContext.response()
+          .setStatusCode(200)
+          .putHeader("content-type", "application/json; charset=utf-8")
+          .end(Json.encodePrettily(queryResult.result().getResults()));
         }
-
+        else{
+          routingContext.response()
+          .setStatusCode(200)
+          .putHeader("content-type", "application/json; charset=utf-8")
+          .end(Json.encodePrettily(queryResult.cause()));
+        }
+        connection.close();
       });
+      
     });
     
    
